@@ -1,37 +1,59 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="mb-4">Welcome, {{ user.username }}</h1>
-
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Current On-Call Week</h5>
-                <div id="schedule">
+<div class="container mt-4">
+    <h1 class="mb-4">Welcome, {{ current_user.username }}</h1>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">My Schedule</h5>
+                    <ul class="list-group">
                     {% for schedule in schedules %}
-                        <div class="schedule-item">
-                            <strong>{{ schedule.user.username }}</strong>: {{ schedule.start_time.strftime('%Y-%m-%d %H:%M') }} - {{ schedule.end_time.strftime('%Y-%m-%d %H:%M') }}
-                        </div>
+                        <li class="list-group-item">
+                            {{ schedule.start_time.strftime('%Y-%m-%d %H:%M') }} - {{ schedule.end_time.strftime('%Y-%m-%d %H:%M') }}
+                        </li>
+                    {% else %}
+                        <li class="list-group-item">No scheduled shifts</li>
                     {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Notes and Announcements</h5>
-                <div id="notes">
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Team Notes</h5>
+                    <ul class="list-group">
                     {% for note in notes %}
-                        <div class="note">
-                            <p>{{ note.content }}</p>
-                            <small>{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                        </div>
+                        <li class="list-group-item">
+                            <small class="text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            <p class="mb-0">{{ note.content }}</p>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item">No team notes</li>
                     {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
+    
+    {% if current_user.role in ['admin', 'manager'] %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Management Actions</h5>
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-primary me-2">Manage Users</a>
+                    <a href="{{ url_for('admin.manage_teams') }}" class="btn btn-primary me-2">Manage Teams</a>
+                    <a href="{{ url_for('manager.manage_schedule') }}" class="btn btn-primary">Manage Schedule</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

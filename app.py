@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_jwt_extended import JWTManager
 from sqlalchemy.orm import DeclarativeBase
+from werkzeug.security import generate_password_hash
 
 class Base(DeclarativeBase):
     pass
@@ -38,6 +39,8 @@ def create_app():
         from models import User, Team, Schedule, TimeOffRequest, Note
         db.create_all()
 
+        create_default_admin()
+
         from routes import main, auth, admin, manager, user
         app.register_blueprint(main)
         app.register_blueprint(auth)
@@ -46,3 +49,19 @@ def create_app():
         app.register_blueprint(user)
 
     return app
+
+def create_default_admin():
+    from models import User
+    admin_user = User.query.filter_by(username='admin').first()
+    if not admin_user:
+        admin_user = User(
+            username='admin',
+            email='admin@example.com',
+            role='admin'
+        )
+        admin_user.password_hash = generate_password_hash('adminpassword')
+        db.session.add(admin_user)
+        db.session.commit()
+        print("Default admin user created.")
+    else:
+        print("Default admin user already exists.")
