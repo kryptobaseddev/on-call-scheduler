@@ -29,20 +29,27 @@
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Existing Teams</h5>
+            <div class="mb-3">
+                <input type="text" class="form-control" id="teamSearch" placeholder="Search teams...">
+            </div>
             <table class="table">
                 <thead>
                     <tr>
                         <th>Team Name</th>
                         <th>Manager</th>
                         <th>Members</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="teamTableBody">
                     {% for team in teams %}
                         <tr>
                             <td>{{ team.name }}</td>
                             <td>{{ team.manager.username if team.manager else 'No Manager' }}</td>
                             <td>{{ team.users|length }}</td>
+                            <td>
+                                <a href="{{ url_for('admin.edit_team', team_id=team.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -50,4 +57,20 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('teamSearch').addEventListener('input', function(e) {
+    const searchText = e.target.value.toLowerCase();
+    const rows = document.getElementById('teamTableBody').getElementsByTagName('tr');
+    
+    for (let row of rows) {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchText)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+});
+</script>
 {% endblock %}

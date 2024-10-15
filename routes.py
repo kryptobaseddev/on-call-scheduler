@@ -77,6 +77,35 @@ def manage_users():
     teams = Team.query.all()
     return render_template('user_management.html', users=users, teams=teams)
 
+@admin.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+def edit_user(user_id):
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('main.dashboard'))
+
+    user = User.query.get_or_404(user_id)
+    teams = Team.query.all()
+
+    if request.method == 'POST':
+        user.username = request.form.get('username')
+        user.email = request.form.get('email')
+        user.role = request.form.get('role')
+        user.team_id = request.form.get('team_id') or None
+
+        if request.form.get('password'):
+            user.set_password(request.form.get('password'))
+
+        try:
+            db.session.commit()
+            flash('User updated successfully.', 'success')
+            return redirect(url_for('admin.manage_users'))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash('An error occurred while updating the user. Please try again.', 'error')
+
+    return render_template('edit_user.html', user=user, teams=teams)
+
 @admin.route('/teams', methods=['GET', 'POST'])
 @login_required
 def manage_teams():
@@ -92,7 +121,6 @@ def manage_teams():
             flash('Team name already exists.', 'error')
         else:
             try:
-                # Convert empty string to None for manager_id
                 manager_id = manager_id if manager_id else None
                 new_team = Team(name=name, manager_id=manager_id)
                 db.session.add(new_team)
@@ -105,6 +133,30 @@ def manage_teams():
     teams = Team.query.all()
     managers = User.query.filter_by(role='manager').all()
     return render_template('team_management.html', teams=teams, managers=managers)
+
+@admin.route('/teams/edit/<int:team_id>', methods=['GET', 'POST'])
+@login_required
+def edit_team(team_id):
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('main.dashboard'))
+
+    team = Team.query.get_or_404(team_id)
+    managers = User.query.filter_by(role='manager').all()
+
+    if request.method == 'POST':
+        team.name = request.form.get('name')
+        team.manager_id = request.form.get('manager_id') or None
+
+        try:
+            db.session.commit()
+            flash('Team updated successfully.', 'success')
+            return redirect(url_for('admin.manage_teams'))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash('An error occurred while updating the team. Please try again.', 'error')
+
+    return render_template('edit_team.html', team=team, managers=managers)
 
 @manager.route('/schedule', methods=['GET', 'POST'])
 @login_required

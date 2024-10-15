@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Edit Team</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form action="{{ url_for('admin.edit_team', team_id=team.id) }}" method="POST">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Team Name</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ team.name }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="manager_id" class="form-label">Manager</label>
+                    <select class="form-select" id="manager_id" name="manager_id">
+                        <option value="">No Manager</option>
+                        {% for manager in managers %}
+                            <option value="{{ manager.id }}" {% if team.manager_id == manager.id %}selected{% endif %}>{{ manager.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Team</button>
+                <a href="{{ url_for('admin.manage_teams') }}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

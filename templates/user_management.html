@@ -45,6 +45,9 @@
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Existing Users</h5>
+            <div class="mb-3">
+                <input type="text" class="form-control" id="userSearch" placeholder="Search users...">
+            </div>
             <table class="table">
                 <thead>
                     <tr>
@@ -52,15 +55,19 @@
                         <th>Email</th>
                         <th>Role</th>
                         <th>Team</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="userTableBody">
                     {% for user in users %}
                         <tr>
                             <td>{{ user.username }}</td>
                             <td>{{ user.email }}</td>
                             <td>{{ user.role }}</td>
                             <td>{{ user.team.name if user.team else 'No Team' }}</td>
+                            <td>
+                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -68,4 +75,20 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('userSearch').addEventListener('input', function(e) {
+    const searchText = e.target.value.toLowerCase();
+    const rows = document.getElementById('userTableBody').getElementsByTagName('tr');
+    
+    for (let row of rows) {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchText)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+});
+</script>
 {% endblock %}
