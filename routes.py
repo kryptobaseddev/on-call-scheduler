@@ -4,6 +4,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from models import User, Team, Schedule, Note
 from app import db
 from datetime import datetime, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 
 main = Blueprint('main', __name__)
 auth = Blueprint('auth', __name__)
@@ -55,18 +56,22 @@ def manage_users():
         email = request.form.get('email')
         password = request.form.get('password')
         role = request.form.get('role')
-        team_id = request.form.get('team_id')
+        team_id = request.form.get('team_id') or None
 
         if User.query.filter_by(username=username).first():
             flash('Username already exists.', 'error')
         elif User.query.filter_by(email=email).first():
             flash('Email already exists.', 'error')
         else:
-            new_user = User(username=username, email=email, role=role, team_id=team_id)
-            new_user.password_hash = generate_password_hash(password)
-            db.session.add(new_user)
-            db.session.commit()
-            flash('User created successfully.', 'success')
+            try:
+                new_user = User(username=username, email=email, role=role, team_id=team_id)
+                new_user.password_hash = generate_password_hash(password)
+                db.session.add(new_user)
+                db.session.commit()
+                flash('User created successfully.', 'success')
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                flash('An error occurred while creating the user. Please try again.', 'error')
 
     users = User.query.all()
     teams = Team.query.all()
@@ -81,15 +86,19 @@ def manage_teams():
 
     if request.method == 'POST':
         name = request.form.get('name')
-        manager_id = request.form.get('manager_id')
+        manager_id = request.form.get('manager_id') or None
 
         if Team.query.filter_by(name=name).first():
             flash('Team name already exists.', 'error')
         else:
-            new_team = Team(name=name, manager_id=manager_id)
-            db.session.add(new_team)
-            db.session.commit()
-            flash('Team created successfully.', 'success')
+            try:
+                new_team = Team(name=name, manager_id=manager_id)
+                db.session.add(new_team)
+                db.session.commit()
+                flash('Team created successfully.', 'success')
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                flash('An error occurred while creating the team. Please try again.', 'error')
 
     teams = Team.query.all()
     managers = User.query.filter_by(role='manager').all()
@@ -107,10 +116,14 @@ def manage_schedule():
         start_time = datetime.strptime(request.form.get('start_time'), '%Y-%m-%dT%H:%M')
         end_time = datetime.strptime(request.form.get('end_time'), '%Y-%m-%dT%H:%M')
 
-        new_schedule = Schedule(user_id=user_id, start_time=start_time, end_time=end_time)
-        db.session.add(new_schedule)
-        db.session.commit()
-        flash('Schedule created successfully.', 'success')
+        try:
+            new_schedule = Schedule(user_id=user_id, start_time=start_time, end_time=end_time)
+            db.session.add(new_schedule)
+            db.session.commit()
+            flash('Schedule created successfully.', 'success')
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash('An error occurred while creating the schedule. Please try again.', 'error')
 
     team_id = current_user.team_id if current_user.role == 'manager' else None
     users = User.query.filter_by(team_id=team_id).all() if team_id else User.query.all()
