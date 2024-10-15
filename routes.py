@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, login_required, logout_user, current_user
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from models import User, Team, Schedule, Note
 from app import db
 from datetime import datetime, timedelta
@@ -38,30 +38,81 @@ def logout():
 @main.route('/dashboard')
 @login_required
 def dashboard():
-    # Fetch user's schedules for the next 7 days
     end_date = datetime.utcnow() + timedelta(days=7)
     schedules = Schedule.query.filter_by(user_id=current_user.id).filter(Schedule.start_time <= end_date).order_by(Schedule.start_time).all()
-    
-    # Fetch team notes
     notes = Note.query.filter_by(team_id=current_user.team_id).order_by(Note.created_at.desc()).limit(5).all()
-    
     return render_template('dashboard.html', schedules=schedules, notes=notes)
 
-# Placeholder routes for admin and manager functions
-@admin.route('/users')
+@admin.route('/users', methods=['GET', 'POST'])
 @login_required
 def manage_users():
-    # TODO: Implement user management
-    return "Manage Users"
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('main.dashboard'))
 
-@admin.route('/teams')
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        role = request.form.get('role')
+        team_id = request.form.get('team_id')
+
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists.', 'error')
+        elif User.query.filter_by(email=email).first():
+            flash('Email already exists.', 'error')
+        else:
+            new_user = User(username=username, email=email, role=role, team_id=team_id)
+            new_user.password_hash = generate_password_hash(password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('User created successfully.', 'success')
+
+    users = User.query.all()
+    teams = Team.query.all()
+    return render_template('user_management.html', users=users, teams=teams)
+
+@admin.route('/teams', methods=['GET', 'POST'])
 @login_required
 def manage_teams():
-    # TODO: Implement team management
-    return "Manage Teams"
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('main.dashboard'))
 
-@manager.route('/schedule')
+    if request.method == 'POST':
+        name = request.form.get('name')
+        manager_id = request.form.get('manager_id')
+
+        if Team.query.filter_by(name=name).first():
+            flash('Team name already exists.', 'error')
+        else:
+            new_team = Team(name=name, manager_id=manager_id)
+            db.session.add(new_team)
+            db.session.commit()
+            flash('Team created successfully.', 'success')
+
+    teams = Team.query.all()
+    managers = User.query.filter_by(role='manager').all()
+    return render_template('team_management.html', teams=teams, managers=managers)
+
+@manager.route('/schedule', methods=['GET', 'POST'])
 @login_required
 def manage_schedule():
-    # TODO: Implement schedule management
-    return "Manage Schedule"
+    if current_user.role not in ['admin', 'manager']:
+        flash('Access denied. Manager privileges required.', 'error')
+        return redirect(url_for('main.dashboard'))
+
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        start_time = datetime.strptime(request.form.get('start_time'), '%Y-%m-%dT%H:%M')
+        end_time = datetime.strptime(request.form.get('end_time'), '%Y-%m-%dT%H:%M')
+
+        new_schedule = Schedule(user_id=user_id, start_time=start_time, end_time=end_time)
+        db.session.add(new_schedule)
+        db.session.commit()
+        flash('Schedule created successfully.', 'success')
+
+    team_id = current_user.team_id if current_user.role == 'manager' else None
+    users = User.query.filter_by(team_id=team_id).all() if team_id else User.query.all()
+    schedules = Schedule.query.join(User).filter(User.team_id == team_id).all() if team_id else Schedule.query.all()
+    return render_template('schedule.html', users=users, schedules=schedules)

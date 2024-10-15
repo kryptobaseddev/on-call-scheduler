@@ -1,55 +1,53 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="mb-4">Team Management</h1>
+<div class="container mt-4">
+    <h1 class="mb-4">Team Management</h1>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <h5 class="card-title">Add New Team</h5>
-        <form action="{{ url_for('admin.manage_teams') }}" method="POST">
-            <div class="mb-3">
-                <label for="name" class="form-label">Team Name</label>
-                <input type="text" class="form-control" id="name" name="name" required>
-            </div>
-            <div class="mb-3">
-                <label for="manager_id" class="form-label">Manager</label>
-                <select class="form-select" id="manager_id" name="manager_id" required>
-                    {% for user in users if user.role == 'manager' %}
-                        <option value="{{ user.id }}">{{ user.username }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Add Team</button>
-        </form>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Add New Team</h5>
+            <form action="{{ url_for('admin.manage_teams') }}" method="POST">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Team Name</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="manager_id" class="form-label">Manager</label>
+                    <select class="form-select" id="manager_id" name="manager_id">
+                        <option value="">No Manager</option>
+                        {% for manager in managers %}
+                            <option value="{{ manager.id }}">{{ manager.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Team</button>
+            </form>
+        </div>
     </div>
-</div>
 
-<div class="card">
-    <div class="card-body">
-        <h5 class="card-title">Existing Teams</h5>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Team Name</th>
-                    <th>Manager</th>
-                    <th>Members</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for team in teams %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Existing Teams</h5>
+            <table class="table">
+                <thead>
                     <tr>
-                        <td>{{ team.name }}</td>
-                        <td>{{ team.manager.username if team.manager else 'N/A' }}</td>
-                        <td>{{ team.users|length }}</td>
-                        <td>
-                            <a href="#" class="btn btn-sm btn-secondary">Edit</a>
-                            <a href="#" class="btn btn-sm btn-danger">Delete</a>
-                        </td>
+                        <th>Team Name</th>
+                        <th>Manager</th>
+                        <th>Members</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% for team in teams %}
+                        <tr>
+                            <td>{{ team.name }}</td>
+                            <td>{{ team.manager.username if team.manager else 'No Manager' }}</td>
+                            <td>{{ team.users|length }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
