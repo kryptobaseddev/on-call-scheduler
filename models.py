@@ -19,7 +19,7 @@ class User(UserMixin, db.Model):
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
-    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     users = db.relationship('User', backref='team', lazy=True, foreign_keys=[User.team_id])
     manager = db.relationship('User', backref='managed_team', lazy=True, foreign_keys=[manager_id])
 

@@ -65,7 +65,7 @@ def manage_users():
         else:
             try:
                 new_user = User(username=username, email=email, role=role, team_id=team_id)
-                new_user.password_hash = generate_password_hash(password)
+                new_user.set_password(password)
                 db.session.add(new_user)
                 db.session.commit()
                 flash('User created successfully.', 'success')
@@ -86,19 +86,21 @@ def manage_teams():
 
     if request.method == 'POST':
         name = request.form.get('name')
-        manager_id = request.form.get('manager_id') or None
+        manager_id = request.form.get('manager_id')
 
         if Team.query.filter_by(name=name).first():
             flash('Team name already exists.', 'error')
         else:
             try:
+                # Convert empty string to None for manager_id
+                manager_id = manager_id if manager_id else None
                 new_team = Team(name=name, manager_id=manager_id)
                 db.session.add(new_team)
                 db.session.commit()
                 flash('Team created successfully.', 'success')
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash('An error occurred while creating the team. Please try again.', 'error')
+                flash(f'An error occurred while creating the team: {str(e)}', 'error')
 
     teams = Team.query.all()
     managers = User.query.filter_by(role='manager').all()
