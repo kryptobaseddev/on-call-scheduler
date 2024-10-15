@@ -1,0 +1,226 @@
+**Design Document for IT Support Team On-Call Scheduling Web Application**
+
+**Table of Contents**
+1. Introduction
+2. Technology Stack
+3. Detailed Requirements
+4. User Roles and Permissions
+5. Data Models
+6. User Interface Design
+7. Backend Functionality
+8. Database Design
+9. Security Considerations
+10. Notifications and Communication
+11. Deployment and DevOps
+12. Testing and Quality Assurance
+13. Future Enhancements
+14. Conclusion
+
+---
+
+### 1. Introduction
+This design document outlines the development plan for a web application that manages on-call scheduling and resources for an IT support team. The application will facilitate scheduling, time-off requests, and team management while providing a smooth, clean, and modern user experience. It will feature robust front-end and back-end systems with a future-proof database architecture.
+
+### 2. Technology Stack
+**Front-End:**
+- **Framework:** React.js
+- **UI Library:** Material-UI (MUI)
+- **State Management:** Redux Toolkit
+- **Styling:** Styled Components
+- **Routing:** React Router
+
+**Back-End:**
+- **Language & Framework:** Node.js with Express.js
+- **Authentication:** JSON Web Tokens (JWT)
+- **API Design:** RESTful API
+- **Real-time Features:** Socket.IO (optional for future enhancements)
+
+**Database:**
+- **Database System:** PostgreSQL
+- **ORM:** Sequelize
+
+**Additional Tools:**
+- **Version Control:** Git with GitHub
+- **Project Management:** Jira or Trello
+- **Testing Frameworks:** Jest (Front-End), Mocha/Chai (Back-End)
+- **Deployment Platform:** AWS or Heroku
+
+### 3. Detailed Requirements
+#### 3.1 User Roles and Permissions
+Implement Role-Based Access Control (RBAC) with three levels:
+
+**Admin**
+- Full access to all features and settings.
+- Can create, edit, and delete users, managers, and teams.
+- Manage system-wide settings and configurations.
+
+**Manager**
+- Manages team members within their team.
+- Approve or deny time-off requests.
+- Adjust on-call schedules for their team.
+- Assign applications and services to team members.
+- View and edit team notes and announcements.
+
+**User**
+- View joint on-call schedules.
+- Access personalized dashboard with their schedules.
+- Submit time-off requests.
+- Search for other users and view their on-call assignments.
+- View team and company-wide notes and announcements.
+
+**Authentication Flow:**
+- Users are created by Admins or Managers; no public sign-up.
+- Secure login with encrypted passwords (bcrypt).
+- Session management using JWT tokens stored in HTTP-only cookies.
+- Password reset functionality managed by Admins/Managers.
+
+#### 3.2 Data Models
+Design the database with normalized tables and relationships to accommodate expanded user information and functionality.
+
+**User Model**
+- Fields: id, firstName, lastName, email, passwordHash, workPhone, mobilePhone, profilePicture, bio, expertise, role, teamId, teamRoles, createdAt, updatedAt
+
+**Team Model**
+- Fields: id, name, colorCode, applicationsServices, managerId, contactInfo, createdAt, updatedAt
+
+**Application/Service Model**
+- Fields: id, name, description, teamId, leadUserId, createdAt, updatedAt
+
+**Schedule Model**
+- Fields: id, userId, teamId, startTime, endTime, isRepeating, repeatInterval, notes, createdAt, updatedAt
+
+**TimeOffRequest Model**
+- Fields: id, userId, teamId, startTime, endTime, status, reason, managerComment, createdAt, updatedAt
+
+**Holiday Model**
+- Fields: id, name, date, isObserved, createdAt, updatedAt
+
+**Notes Model**
+- Fields: id, content, startDate, endDate, visibility, teamId, userId, createdBy, createdAt, updatedAt
+
+**Relationships:**
+- Users belong to Teams.
+- Teams have many Users.
+- Applications/Services are associated with Teams and Users.
+- Schedules are linked to Users and Teams.
+- TimeOffRequests are linked to Users and Teams.
+- Notes can be global, team-specific, or user-specific.
+
+### 4. User Interface Design
+#### General Design Principles
+- **Responsive Design:** Ensure the application works seamlessly across devices.
+- **Consistent Styling:** Use Material-UI theming for a cohesive look.
+- **Accessibility:** Adhere to WCAG guidelines for accessible content.
+
+#### Login Page
+- Simple login form with email and password fields.
+- Option to contact Admin/Manager if login details are forgotten.
+
+#### Main Dashboard (After Login)
+**For All Users:**
+- **Current On-Call Week View:** Calendar or timeline displaying the current week. Teams are color-coded for easy differentiation. Ability to hover over shifts to see details.
+- **Notes and Announcements:** Display global and team-specific notes.
+
+**Personal Dashboard (User-Specific):**
+- **My Schedule:** List or calendar view of upcoming on-call shifts. Status of time-off requests.
+- **Time-Off Requests:** Form to submit new requests.
+
+**Manager Dashboard:**
+- **Team Management:** View and edit team members' profiles.
+- **Schedule Management:** Drag-and-drop interface for assigning shifts.
+
+### 5. Backend Functionality
+#### Authentication and Authorization
+- Secure endpoints using JWT tokens.
+- Middleware to enforce role-based access control.
+
+#### API Endpoints
+**Authentication:**
+- POST /api/login, POST /api/logout
+
+**User Management:**
+- GET /api/users, POST /api/users, PUT /api/users/:id, DELETE /api/users/:id
+
+**Team Management:**
+- GET /api/teams, POST /api/teams, PUT /api/teams/:id, DELETE /api/teams/:id
+
+**Application/Service Management:**
+- GET /api/applications, POST /api/applications, PUT /api/applications/:id, DELETE /api/applications/:id
+
+**Schedule Management:**
+- GET /api/schedules, POST /api/schedules, PUT /api/schedules/:id, DELETE /api/schedules/:id
+
+**Time-Off Requests:**
+- GET /api/timeoff, POST /api/timeoff, PUT /api/timeoff/:id, DELETE /api/timeoff/:id
+
+**Notes Management:**
+- GET /api/notes, POST /api/notes, PUT /api/notes/:id, DELETE /api/notes/:id
+
+**Holiday Management:**
+- GET /api/holidays, POST /api/holidays, PUT /api/holidays/:id, DELETE /api/holidays/:id
+
+### 6. Database Design
+**Schema Details**
+- Users, Teams, Applications/Services, Expertise Junction Table, Schedules, TimeOffRequests, Notes, Holidays
+
+### 7. Security Considerations
+- **Password Security:** Use bcrypt for hashing passwords.
+- **Input Validation:** Sanitize and validate all inputs server-side.
+- **Access Control:** Implement middleware to check user roles before accessing endpoints.
+- **Data Encryption:** Use HTTPS for all communications.
+- **Session Management:** Use HTTP-only and secure cookies for JWT tokens.
+- **Audit Logging:** Record significant actions for accountability.
+
+### 8. Notifications and Communication
+**Email Notifications**
+- **Triggers:** Time-off request submission, approval/denial, schedule changes, new notes.
+- **Implementation:** Use a service like SendGrid or AWS SES.
+
+**In-App Notifications**
+- **Features:** Notification center in the dashboard, real-time alerts for critical updates, dismissible notifications.
+
+### 9. Deployment and DevOps
+**Version Control and Collaboration**
+- Git repository hosted on GitHub.
+- Branching strategy like GitFlow.
+
+**Continuous Integration/Continuous Deployment (CI/CD)**
+- Automated testing and deployment using tools like Jenkins, CircleCI, or GitHub Actions.
+
+**Environment Management**
+- Use .env files for environment variables.
+- Infrastructure as Code using Terraform or CloudFormation.
+
+**Hosting and Scalability**
+- Host on AWS EC2 or AWS Elastic Beanstalk.
+- Use AWS RDS for PostgreSQL.
+
+### 10. Testing and Quality Assurance
+**Testing Strategies**
+- **Unit Testing:** Jest and React Testing Library (Front-End), Mocha and Chai (Back-End).
+- **Integration Testing:** Validate API endpoints and data flow between front-end and back-end.
+- **End-to-End Testing:** Cypress or Selenium for simulating user interactions.
+- **Performance Testing:** JMeter or LoadRunner to test application under load.
+- **Security Testing:** Vulnerability scans and penetration testing before production release.
+- **User Acceptance Testing (UAT):** Involve end-users to gather feedback and refine the application.
+
+### 11. Future Enhancements
+- **Advanced Scheduling Algorithms:** AI-driven suggestions for optimal rotations.
+- **Reporting and Analytics:** Dashboards showing key metrics (e.g., coverage gaps, time-off trends).
+- **Calendar Integration:** Sync with Google Calendar, Outlook, etc.
+- **Mobile Application:** Native iOS and Android apps for better accessibility.
+- **Machine Learning Integration:** Predictive analytics for staffing needs.
+
+### 12. Conclusion
+This design document provides a comprehensive plan for developing an on-call scheduling web application tailored to an IT support team's needs. By incorporating detailed data models, robust security measures, and a user-centric interface, the application aims to streamline scheduling processes and enhance team collaboration. The architecture is designed to be scalable and adaptable, allowing for future enhancements as the organization's needs evolve.
+
+**Next Steps:**
+- **Approval and Sign-Off:** Review the design document with stakeholders for feedback and approval.
+- **Project Planning:** Develop a detailed project timeline with milestones and deliverables.
+- **Resource Allocation:** Assemble the development team and assign roles.
+- **Development Kick-Off:** Begin the iterative development process, adhering to Agile methodologies.
+
+**Appendices:**
+- **Appendix A:** Wireframes and Mockups (to be developed).
+- **Appendix B:** Detailed API Documentation (to be developed).
+- **Appendix C:** Testing Plans and Cases (to be developed).
