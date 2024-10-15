@@ -1,0 +1,32 @@
+/* Custom styles to complement Bootstrap */
+[data-bs-theme=dark] {
+    --bs-body-bg: #1a1a1a;
+    --bs-body-color: #f8f9fa;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.card {
+    margin-bottom: 20px;
+}
+
+.schedule-item {
+    border-left: 4px solid var(--bs-primary);
+    padding-left: 10px;
+    margin-bottom: 10px;
+}
+
+.time-off-request {
+    border-left: 4px solid var(--bs-warning);
+    padding-left: 10px;
+    margin-bottom: 10px;
+}
+
+.note {
+    background-color: var(--bs-dark);
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+}

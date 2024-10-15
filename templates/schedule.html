@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">{% if current_user.role == 'manager' %}Manage Schedule{% else %}My Schedule{% endif %}</h1>
+
+{% if current_user.role == 'manager' %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Add New Schedule</h5>
+        <form id="schedule-form" action="{{ url_for('manager.manage_schedule') }}" method="POST">
+            <div class="mb-3">
+                <label for="user-select" class="form-label">User</label>
+                <select class="form-select" id="user-select" name="user_id" required>
+                    {% for user in team.users %}
+                        <option value="{{ user.id }}">{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="start-time" class="form-label">Start Time</label>
+                <input type="datetime-local" class="form-control" id="start-time" name="start_time" required>
+            </div>
+            <div class="mb-3">
+                <label for="end-time" class="form-label">End Time</label>
+                <input type="datetime-local" class="form-control" id="end-time" name="end_time" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Schedule</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">{% if current_user.role == 'manager' %}Team Schedule{% else %}My Schedule{% endif %}</h5>
+        <div id="schedule">
+            {% for schedule in schedules %}
+                <div class="schedule-item">
+                    <strong>{{ schedule.user.username }}</strong>: {{ schedule.start_time.strftime('%Y-%m-%d %H:%M') }} - {{ schedule.end_time.strftime('%Y-%m-%d %H:%M') }}
+                    {% if current_user.role == 'manager' %}
+                        <a href="#" class="btn btn-sm btn-secondary">Edit</a>
+                        <a href="#" class="btn btn-sm btn-danger">Delete</a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/schedule.js') }}"></script>
+{% endblock %}
