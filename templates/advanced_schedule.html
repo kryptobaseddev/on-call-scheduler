@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Generate Advanced Schedule</h1>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ url_for('manager.advanced_schedule') }}" method="POST">
+                <div class="mb-3">
+                    <label for="team_id" class="form-label">Team</label>
+                    <select class="form-select" id="team_id" name="team_id" required>
+                        {% for team in teams %}
+                            <option value="{{ team.id }}">{{ team.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                </div>
+                <div class="mb-3">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Generate Advanced Schedule</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

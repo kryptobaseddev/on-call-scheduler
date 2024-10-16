@@ -5,6 +5,7 @@ from models import User, Team, Schedule, Note
 from app import db
 from datetime import datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
+from scheduling_algorithm import generate_advanced_schedule
 
 main = Blueprint('main', __name__)
 auth = Blueprint('auth', __name__)
@@ -183,3 +184,29 @@ def manage_schedule():
     users = User.query.filter_by(team_id=team_id).all() if team_id else User.query.all()
     schedules = Schedule.query.join(User).filter(User.team_id == team_id).all() if team_id else Schedule.query.all()
     return render_template('schedule.html', users=users, schedules=schedules)
+
+@manager.route('/advanced_schedule', methods=['GET', 'POST'])
+@login_required
+def advanced_schedule():
+    if current_user.role not in ['admin', 'manager']:
+        flash('Access denied. Admin or Manager privileges required.', 'error')
+        return redirect(url_for('main.dashboard'))
+
+    teams = Team.query.all()
+
+    if request.method == 'POST':
+        team_id = request.form.get('team_id')
+        start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')
+        end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')
+
+        try:
+            new_schedules = generate_advanced_schedule(team_id, start_date, end_date)
+            for schedule in new_schedules:
+                db.session.add(schedule)
+            db.session.commit()
+            flash('Advanced schedule generated successfully.', 'success')
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash('An error occurred while generating the schedule. Please try again.', 'error')
+
+    return render_template('advanced_schedule.html', teams=teams)
