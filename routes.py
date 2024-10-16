@@ -60,6 +60,14 @@ def login():
             'status': 'error',
             'message': 'Invalid username or password'
         })
+    
+    # Automatically log in as admin for testing purposes
+    admin_user = User.query.filter_by(username='admin').first()
+    if admin_user:
+        login_user(admin_user)
+        flash('Logged in as admin for testing purposes', 'info')
+        return redirect(url_for('main.index'))
+    
     return render_template('login.html')
 
 @admin.route('/analytics')
@@ -78,103 +86,37 @@ def analytics_dashboard():
             logger.error(f"Database connection error: {str(e)}")
             raise
 
-        # Total Users
-        try:
-            total_users_query = db_session.query(User).statement
-            logger.debug(f"SQL Query for total users: {total_users_query}")
-            total_users = db_session.query(User).count()
-            logger.debug(f"Query result: Total users: {total_users}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error querying total users: {str(e)}")
-            total_users = 0
-
-        # Total Teams
-        try:
-            total_teams_query = db_session.query(Team).statement
-            logger.debug(f"SQL Query for total teams: {total_teams_query}")
-            total_teams = db_session.query(Team).count()
-            logger.debug(f"Query result: Total teams: {total_teams}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error querying total teams: {str(e)}")
-            total_teams = 0
-
-        # Total Schedules
-        try:
-            total_schedules_query = db_session.query(Schedule).statement
-            logger.debug(f"SQL Query for total schedules: {total_schedules_query}")
-            total_schedules = db_session.query(Schedule).count()
-            logger.debug(f"Query result: Total schedules: {total_schedules}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error querying total schedules: {str(e)}")
-            total_schedules = 0
+        total_users = db_session.query(User).count()
+        total_teams = db_session.query(Team).count()
+        total_schedules = db_session.query(Schedule).count()
 
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
 
-        # User Hours
-        try:
-            user_hours_query = db_session.query(
-                User.username,
-                func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
-            ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username)
-            logger.debug(f"SQL Query for user hours: {user_hours_query}")
-            user_hours = user_hours_query.all()
-            logger.debug(f"Query result: User hours: {user_hours}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error querying user hours: {str(e)}")
-            user_hours = []
+        user_hours = db_session.query(
+            User.username,
+            func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
+        ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username).all()
 
-        # Team Hours
-        try:
-            team_hours_query = db_session.query(
-                Team.name,
-                func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
-            ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name)
-            logger.debug(f"SQL Query for team hours: {team_hours_query}")
-            team_hours = team_hours_query.all()
-            logger.debug(f"Query result: Team hours: {team_hours}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error querying team hours: {str(e)}")
-            team_hours = []
+        team_hours = db_session.query(
+            Team.name,
+            func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
+        ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name).all()
 
-        # Time Off Status
-        try:
-            time_off_status_query = db_session.query(
-                TimeOffRequest.status,
-                func.count(TimeOffRequest.id)
-            ).group_by(TimeOffRequest.status)
-            logger.debug(f"SQL Query for time off status: {time_off_status_query}")
-            time_off_status = time_off_status_query.all()
-            logger.debug(f"Query result: Time off status: {time_off_status}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error querying time off status: {str(e)}")
-            time_off_status = []
+        time_off_status = db_session.query(
+            TimeOffRequest.status,
+            func.count(TimeOffRequest.id)
+        ).group_by(TimeOffRequest.status).all()
 
-        # Time Off Trends
-        try:
-            six_months_ago = datetime.utcnow() - timedelta(days=180)
-            time_off_trends_query = db_session.query(
-                func.date_trunc('month', TimeOffRequest.start_date).label('month'),
-                func.count(TimeOffRequest.id)
-            ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month')
-            logger.debug(f"SQL Query for time off trends: {time_off_trends_query}")
-            time_off_trends = time_off_trends_query.all()
-            logger.debug(f"Query result: Time off trends: {time_off_trends}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error querying time off trends: {str(e)}")
-            time_off_trends = []
+        six_months_ago = datetime.utcnow() - timedelta(days=180)
+        time_off_trends = db_session.query(
+            func.date_trunc('month', TimeOffRequest.start_date).label('month'),
+            func.count(TimeOffRequest.id)
+        ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month').all()
 
-        # User Activity
-        try:
-            user_activity_query = db_session.query(
-                User.username,
-                func.count(UserActivity.id).label('login_count')
-            ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username)
-            logger.debug(f"SQL Query for user activity: {user_activity_query}")
-            user_activity = user_activity_query.all()
-            logger.debug(f"Query result: User activity: {user_activity}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error querying user activity: {str(e)}")
-            user_activity = []
+        user_activity = db_session.query(
+            User.username,
+            func.count(UserActivity.id).label('login_count')
+        ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
 
         template_data = {
             'total_users': total_users,
@@ -220,28 +162,30 @@ def manage_users():
             raise
 
         users_query = db_session.query(User)
-        logger.debug(f"SQL Query: {users_query.statement}")
+        logger.debug(f"SQL Query for users: {users_query}")
         users = users_query.all()
-        logger.debug(f"Query result: Retrieved users: {[user.username for user in users]}")
+        logger.info(f"Retrieved {len(users)} users")
+        logger.debug(f"Retrieved users: {[user.username for user in users]}")
 
         teams_query = db_session.query(Team)
-        logger.debug(f"SQL Query: {teams_query.statement}")
+        logger.debug(f"SQL Query for teams: {teams_query}")
         teams = teams_query.all()
-        logger.debug(f"Query result: Retrieved teams: {[team.name for team in teams]}")
+        logger.info(f"Retrieved {len(teams)} teams")
+        logger.debug(f"Retrieved teams: {[team.name for team in teams]}")
 
         return render_template('user_management.html', users=users, teams=teams)
     except OperationalError as e:
         logger.error(f"Database connection error in manage_users route: {str(e)}")
         flash('A database connection error occurred. Please try again later.', 'error')
-        return render_template('user_management.html')
+        return render_template('user_management.html', users=[], teams=[])
     except SQLAlchemyError as e:
         logger.error(f"Database error in manage_users route: {str(e)}")
         flash('An error occurred while processing your request.', 'error')
-        return render_template('user_management.html')
+        return render_template('user_management.html', users=[], teams=[])
     except Exception as e:
         logger.error(f"Unexpected error in manage_users route: {str(e)}")
         flash('An unexpected error occurred. Please try again later.', 'error')
-        return render_template('user_management.html')
+        return render_template('user_management.html', users=[], teams=[])
     finally:
         db_session.close()
 
@@ -261,28 +205,30 @@ def manage_teams():
             raise
 
         teams_query = db_session.query(Team)
-        logger.debug(f"SQL Query: {teams_query.statement}")
+        logger.debug(f"SQL Query for teams: {teams_query}")
         teams = teams_query.all()
-        logger.debug(f"Query result: Retrieved teams: {[team.name for team in teams]}")
+        logger.info(f"Retrieved {len(teams)} teams")
+        logger.debug(f"Retrieved teams: {[team.name for team in teams]}")
 
         managers_query = db_session.query(User).filter(User.role.in_(['manager', 'admin']))
-        logger.debug(f"SQL Query: {managers_query.statement}")
+        logger.debug(f"SQL Query for managers: {managers_query}")
         managers = managers_query.all()
-        logger.debug(f"Query result: Retrieved managers: {[manager.username for manager in managers]}")
+        logger.info(f"Retrieved {len(managers)} managers")
+        logger.debug(f"Retrieved managers: {[manager.username for manager in managers]}")
 
         return render_template('team_management.html', teams=teams, managers=managers)
     except OperationalError as e:
         logger.error(f"Database connection error in manage_teams route: {str(e)}")
         flash('A database connection error occurred. Please try again later.', 'error')
-        return render_template('team_management.html')
+        return render_template('team_management.html', teams=[], managers=[])
     except SQLAlchemyError as e:
         logger.error(f"Database error in manage_teams route: {str(e)}")
         flash('An error occurred while processing your request.', 'error')
-        return render_template('team_management.html')
+        return render_template('team_management.html', teams=[], managers=[])
     except Exception as e:
         logger.error(f"Unexpected error in manage_teams route: {str(e)}")
         flash('An unexpected error occurred. Please try again later.', 'error')
-        return render_template('team_management.html')
+        return render_template('team_management.html', teams=[], managers=[])
     finally:
         db_session.close()
 

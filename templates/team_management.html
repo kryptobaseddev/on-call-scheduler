@@ -62,6 +62,17 @@
             </table>
         </div>
     </div>
+
+    <!-- Debug output -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">Debug Information</h5>
+            <h6>Teams ({{ teams|length }}):</h6>
+            <pre>{{ teams|pprint }}</pre>
+            <h6>Managers ({{ managers|length }}):</h6>
+            <pre>{{ managers|pprint }}</pre>
+        </div>
+    </div>
 </div>
 
 <style>
