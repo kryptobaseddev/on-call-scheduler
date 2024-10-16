@@ -31,9 +31,6 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin.manage_teams') }}">Manage Teams</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('admin.custom_report') }}">Custom Report</a>
-                        </li>
                         {% endif %}
                         {% if current_user.role in ['admin', 'manager'] %}
                         <li class="nav-item">

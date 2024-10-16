@@ -51,8 +51,15 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             login_user(user)
-            return redirect(url_for('main.index'))
-        flash('Invalid username or password', 'error')
+            return jsonify({
+                'status': 'success',
+                'message': 'Login successful',
+                'redirect': url_for('main.index')
+            })
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid username or password'
+        })
     return render_template('login.html')
 
 @admin.route('/analytics')
@@ -63,52 +70,37 @@ def analytics_dashboard():
     try:
         logger.info(f"User {current_user.username} accessing analytics dashboard")
         
-        logger.debug("Retrieving total counts")
         total_users = db_session.query(User).count()
         total_teams = db_session.query(Team).count()
         total_schedules = db_session.query(Schedule).count()
-        logger.debug(f"Total users: {total_users}, Total teams: {total_teams}, Total schedules: {total_schedules}")
 
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        logger.debug(f"Calculating statistics for the last 30 days (since {thirty_days_ago})")
-        
-        logger.debug("Retrieving user hours")
         user_hours = db_session.query(
             User.username,
             func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
         ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username).all()
-        logger.debug(f"User hours: {user_hours}")
 
-        logger.debug("Retrieving team hours")
         team_hours = db_session.query(
             Team.name,
             func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
         ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name).all()
-        logger.debug(f"Team hours: {team_hours}")
 
-        logger.debug("Retrieving time off status")
         time_off_status = db_session.query(
             TimeOffRequest.status,
             func.count(TimeOffRequest.id)
         ).group_by(TimeOffRequest.status).all()
-        logger.debug(f"Time off status: {time_off_status}")
 
         six_months_ago = datetime.utcnow() - timedelta(days=180)
-        logger.debug(f"Calculating time off trends for the last 6 months (since {six_months_ago})")
         time_off_trends = db_session.query(
             func.date_trunc('month', TimeOffRequest.start_date).label('month'),
             func.count(TimeOffRequest.id)
         ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month').all()
-        logger.debug(f"Time off trends: {time_off_trends}")
 
-        logger.debug("Retrieving user activity")
         user_activity = db_session.query(
             User.username,
             func.count(UserActivity.id).label('login_count')
         ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
-        logger.debug(f"User activity: {user_activity}")
 
-        logger.info("Rendering analytics dashboard template")
         return render_template('analytics_dashboard.html',
                                total_users=total_users,
                                total_teams=total_teams,
@@ -118,17 +110,9 @@ def analytics_dashboard():
                                time_off_status=time_off_status,
                                time_off_trends=time_off_trends,
                                user_activity=user_activity)
-    except OperationalError as e:
-        logger.error(f"Database connection error in analytics_dashboard route: {str(e)}")
-        flash('A database error occurred. Please try again later.', 'error')
-        return render_template('analytics_dashboard.html')
-    except SQLAlchemyError as e:
-        logger.error(f"Database error in analytics_dashboard route: {str(e)}")
-        flash('An error occurred while processing your request.', 'error')
-        return render_template('analytics_dashboard.html')
     except Exception as e:
-        logger.error(f"Unexpected error in analytics_dashboard route: {str(e)}")
-        flash('An unexpected error occurred. Please try again later.', 'error')
+        logger.error(f"Error in analytics_dashboard route: {str(e)}")
+        flash('An error occurred while loading the analytics dashboard.', 'error')
         return render_template('analytics_dashboard.html')
     finally:
         db_session.close()

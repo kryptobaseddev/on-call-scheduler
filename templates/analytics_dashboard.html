@@ -4,43 +4,6 @@
 <div class="container mt-4">
     <h1 class="mb-4">Analytics Dashboard</h1>
 
-    <!-- Debug output -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Debug Information</h5>
-            <pre>
-Total Users: {{ total_users }}
-Total Teams: {{ total_teams }}
-Total Schedules: {{ total_schedules }}
-
-User Hours:
-{% for user, hours in user_hours %}
-{{ user }}: {{ hours }}
-{% endfor %}
-
-Team Hours:
-{% for team, hours in team_hours %}
-{{ team }}: {{ hours }}
-{% endfor %}
-
-Time Off Status:
-{% for status, count in time_off_status %}
-{{ status }}: {{ count }}
-{% endfor %}
-
-Time Off Trends:
-{% for month, count in time_off_trends %}
-{{ month.strftime("%B %Y") }}: {{ count }}
-{% endfor %}
-
-User Activity:
-{% for user, login_count in user_activity %}
-{{ user }}: {{ login_count }}
-{% endfor %}
-            </pre>
-        </div>
-    </div>
-
     <div class="row">
         <div class="col-md-4 mb-4">
             <div class="card">
