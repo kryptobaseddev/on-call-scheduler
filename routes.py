@@ -73,33 +73,45 @@ def analytics_dashboard():
         total_users = db_session.query(User).count()
         total_teams = db_session.query(Team).count()
         total_schedules = db_session.query(Schedule).count()
+        
+        logger.debug(f"Total users: {total_users}, Total teams: {total_teams}, Total schedules: {total_schedules}")
 
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         user_hours = db_session.query(
             User.username,
             func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
         ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username).all()
+        
+        logger.debug(f"User hours: {user_hours}")
 
         team_hours = db_session.query(
             Team.name,
             func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
         ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name).all()
+        
+        logger.debug(f"Team hours: {team_hours}")
 
         time_off_status = db_session.query(
             TimeOffRequest.status,
             func.count(TimeOffRequest.id)
         ).group_by(TimeOffRequest.status).all()
+        
+        logger.debug(f"Time off status: {time_off_status}")
 
         six_months_ago = datetime.utcnow() - timedelta(days=180)
         time_off_trends = db_session.query(
             func.date_trunc('month', TimeOffRequest.start_date).label('month'),
             func.count(TimeOffRequest.id)
         ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month').all()
+        
+        logger.debug(f"Time off trends: {time_off_trends}")
 
         user_activity = db_session.query(
             User.username,
             func.count(UserActivity.id).label('login_count')
         ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
+        
+        logger.debug(f"User activity: {user_activity}")
 
         return render_template('analytics_dashboard.html',
                                total_users=total_users,
