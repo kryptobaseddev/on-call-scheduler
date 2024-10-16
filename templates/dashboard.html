@@ -5,12 +5,29 @@
     <h1 class="mb-4">Welcome, {{ current_user.username }}</h1>
     
     <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">On-Call Schedule</h5>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="viewToggle">
+                            <label class="form-check-label" for="viewToggle">Toggle Monthly/Weekly View</label>
+                        </div>
+                    </div>
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
                     <h5 class="card-title">My Upcoming On-Call Dates</h5>
                     <ul class="list-group">
-                    {% for schedule in schedules %}
+                    {% for schedule in user_schedules %}
                         <li class="list-group-item">
                             {{ schedule.start_time.strftime('%Y-%m-%d %H:%M') }} - {{ schedule.end_time.strftime('%Y-%m-%d %H:%M') }}
                         </li>
@@ -57,4 +74,58 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js'></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        events: [
+            {% for schedule in all_schedules %}
+            {
+                title: '{{ schedule.user.username }} ({{ schedule.user.team.name }})',
+                start: '{{ schedule.start_time.isoformat() }}',
+                end: '{{ schedule.end_time.isoformat() }}',
+                color: '{{ schedule.user.team.color if schedule.user.team else "#000000" }}',
+                extendedProps: {
+                    teamName: '{{ schedule.user.team.name if schedule.user.team else "No Team" }}',
+                    userName: '{{ schedule.user.username }}',
+                    mobilePhone: '{{ schedule.user.mobile_phone if schedule.user.mobile_phone else "N/A" }}'
+                }
+            },
+            {% endfor %}
+        ],
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek'
+        },
+        eventDidMount: function(info) {
+            var tooltip = new bootstrap.Tooltip(info.el, {
+                title: `Team: ${info.event.extendedProps.teamName}<br>
+                        User: ${info.event.extendedProps.userName}<br>
+                        Phone: ${info.event.extendedProps.mobilePhone}`,
+                html: true,
+                placement: 'top',
+                trigger: 'hover',
+                container: 'body'
+            });
+        }
+    });
+    calendar.render();
+
+    // Toggle between monthly and weekly views
+    document.getElementById('viewToggle').addEventListener('change', function(e) {
+        if (e.target.checked) {
+            calendar.changeView('timeGridWeek');
+        } else {
+            calendar.changeView('dayGridMonth');
+        }
+    });
+});
+</script>
 {% endblock %}

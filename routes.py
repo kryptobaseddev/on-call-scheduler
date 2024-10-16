@@ -47,9 +47,16 @@ def logout():
 @login_required
 def dashboard():
     end_date = datetime.utcnow() + timedelta(days=30)  # Show schedules for the next 30 days
-    schedules = Schedule.query.filter_by(user_id=current_user.id).filter(Schedule.start_time <= end_date).order_by(Schedule.start_time).all()
+    
+    # Fetch all schedules, not just the current user's
+    all_schedules = Schedule.query.filter(Schedule.start_time <= end_date).order_by(Schedule.start_time).all()
+    
+    # Fetch the current user's schedules separately
+    user_schedules = [s for s in all_schedules if s.user_id == current_user.id]
+    
     notes = Note.query.filter_by(team_id=current_user.team_id).order_by(Note.created_at.desc()).limit(5).all()
-    return render_template('dashboard.html', schedules=schedules, notes=notes)
+    teams = Team.query.all()
+    return render_template('dashboard.html', all_schedules=all_schedules, user_schedules=user_schedules, notes=notes, teams=teams)
 
 @admin.route('/users', methods=['GET', 'POST'])
 @login_required
