@@ -54,6 +54,8 @@ def logout():
 @login_required
 @admin_required
 def analytics_dashboard():
+    logger.info("Entering analytics_dashboard route")
+    
     total_users = User.query.count()
     total_teams = Team.query.count()
     total_schedules = Schedule.query.count()
@@ -90,6 +92,15 @@ def analytics_dashboard():
         User.username,
         func.count(UserActivity.id).label('login_count')
     ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
+
+    logger.info(f"Total users: {total_users}")
+    logger.info(f"Total teams: {total_teams}")
+    logger.info(f"Total schedules: {total_schedules}")
+    logger.info(f"User hours: {user_hours}")
+    logger.info(f"Team hours: {team_hours}")
+    logger.info(f"Time off status: {time_off_status}")
+    logger.info(f"Time off trends: {time_off_trends}")
+    logger.info(f"User activity: {user_activity}")
 
     return render_template('analytics_dashboard.html',
                            total_users=total_users,
