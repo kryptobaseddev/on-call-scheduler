@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def index():
     try:
+        logger.info(f"User {current_user.username} accessing index page")
         user_schedules = Schedule.query.filter_by(user_id=current_user.id).all()
         all_schedules = Schedule.query.all()
         notes = Note.query.filter_by(team_id=current_user.team_id).all()
@@ -63,7 +64,7 @@ def logout():
 @admin_required
 def analytics_dashboard():
     try:
-        logger.info("Entering analytics_dashboard route")
+        logger.info(f"User {current_user.username} accessing analytics dashboard")
         
         total_users = User.query.count()
         total_teams = Team.query.count()
@@ -97,7 +98,7 @@ def analytics_dashboard():
             func.count(UserActivity.id).label('login_count')
         ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
 
-        logger.info(f"Analytics data retrieved successfully")
+        logger.info(f"Analytics data retrieved successfully for user {current_user.username}")
 
         return render_template('analytics_dashboard.html',
                                total_users=total_users,
@@ -118,6 +119,7 @@ def analytics_dashboard():
 @admin_required
 def manage_users():
     try:
+        logger.info(f"User {current_user.username} accessing manage users page")
         users = User.query.all()
         teams = Team.query.all()
         return render_template('user_management.html', users=users, teams=teams)
@@ -157,6 +159,7 @@ def add_user():
 @admin_required
 def manage_teams():
     try:
+        logger.info(f"User {current_user.username} accessing manage teams page")
         teams = Team.query.all()
         managers = User.query.filter_by(role='manager').all()
         return render_template('team_management.html', teams=teams, managers=managers)
@@ -231,6 +234,7 @@ def custom_report():
 @manager_required
 def manage_schedule():
     try:
+        logger.info(f"User {current_user.username} accessing manage schedule page")
         users = User.query.filter_by(team_id=current_user.team_id).all()
         schedules = Schedule.query.join(User).filter(User.team_id == current_user.team_id).all()
         return render_template('schedule.html', users=users, schedules=schedules)
