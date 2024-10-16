@@ -16,7 +16,7 @@ admin = Blueprint('admin', __name__)
 manager = Blueprint('manager', __name__)
 user = Blueprint('user', __name__)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 @main.route('/')
@@ -98,7 +98,14 @@ def analytics_dashboard():
             func.count(UserActivity.id).label('login_count')
         ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
 
-        logger.info(f"Analytics data retrieved successfully for user {current_user.username}")
+        logger.debug(f"Total users: {total_users}")
+        logger.debug(f"Total teams: {total_teams}")
+        logger.debug(f"Total schedules: {total_schedules}")
+        logger.debug(f"User hours: {user_hours}")
+        logger.debug(f"Team hours: {team_hours}")
+        logger.debug(f"Time off status: {time_off_status}")
+        logger.debug(f"Time off trends: {time_off_trends}")
+        logger.debug(f"User activity: {user_activity}")
 
         return render_template('analytics_dashboard.html',
                                total_users=total_users,
