@@ -27,5 +27,33 @@
             </form>
         </div>
     </div>
+
+    {% if schedules %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Generated Schedule for {{ team.name }}</h5>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>User</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for schedule in schedules %}
+                    <tr>
+                        <td>{{ schedule.start_time.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ schedule.user.username }}</td>
+                        <td>{{ schedule.start_time.strftime('%H:%M') }}</td>
+                        <td>{{ schedule.end_time.strftime('%H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

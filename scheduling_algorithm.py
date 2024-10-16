@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from models import User, Schedule, Team
+from models import User, Schedule, Team, TimeOffRequest
 from sqlalchemy import func
 
 def generate_advanced_schedule(team_id, start_date, end_date):
@@ -20,6 +20,23 @@ def generate_advanced_schedule(team_id, start_date, end_date):
     # Get the current on-call hours for each user
     user_hours = {user.id: get_user_on_call_hours(user.id, start_date, end_date) for user in users}
     
+    # Get time off requests for the period
+    time_off_requests = TimeOffRequest.query.filter(
+        TimeOffRequest.user_id.in_([user.id for user in users]),
+        TimeOffRequest.start_date <= end_date,
+        TimeOffRequest.end_date >= start_date,
+        TimeOffRequest.status == 'Approved'
+    ).all()
+
+    # Create a dictionary of unavailable dates for each user
+    unavailable_dates = {user.id: set() for user in users}
+    for request in time_off_requests:
+        current_date = max(request.start_date, start_date)
+        end = min(request.end_date, end_date)
+        while current_date <= end:
+            unavailable_dates[request.user_id].add(current_date)
+            current_date += timedelta(days=1)
+
     # Sort users by their current on-call hours (ascending)
     sorted_users = sorted(users, key=lambda u: user_hours[u.id])
     
@@ -27,8 +44,16 @@ def generate_advanced_schedule(team_id, start_date, end_date):
     current_date = start_date
     
     while current_date <= end_date:
+        # Filter out unavailable users for the current date
+        available_users = [user for user in sorted_users if current_date not in unavailable_dates[user.id]]
+        
+        if not available_users:
+            # If no users are available, skip this day
+            current_date += timedelta(days=1)
+            continue
+        
         # Select the user with the least on-call hours
-        selected_user = sorted_users[0]
+        selected_user = available_users[0]
         
         # Create a new schedule
         new_schedule = Schedule(

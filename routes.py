@@ -207,12 +207,26 @@ def advanced_schedule():
 
         try:
             new_schedules = generate_advanced_schedule(team_id, start_date, end_date)
-            for schedule in new_schedules:
-                db.session.add(schedule)
-            db.session.commit()
-            flash('Advanced schedule generated successfully.', 'success')
+            if not new_schedules:
+                flash('No schedules could be generated. Please check team members and their availability.', 'warning')
+            else:
+                for schedule in new_schedules:
+                    db.session.add(schedule)
+                db.session.commit()
+                flash(f'Advanced schedule generated successfully. {len(new_schedules)} shifts created.', 'success')
+            
+            # Fetch the generated schedules for display
+            team = Team.query.get(team_id)
+            schedules = Schedule.query.join(User).filter(
+                User.team_id == team_id,
+                Schedule.start_time >= start_date,
+                Schedule.end_time <= end_date
+            ).order_by(Schedule.start_time).all()
+            
+            return render_template('advanced_schedule.html', teams=teams, schedules=schedules, team=team)
         except SQLAlchemyError as e:
             db.session.rollback()
+            logging.error(f"Error generating advanced schedule: {str(e)}")
             flash('An error occurred while generating the schedule. Please try again.', 'error')
 
     return render_template('advanced_schedule.html', teams=teams)
