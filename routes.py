@@ -213,7 +213,7 @@ def advanced_schedule():
                 for schedule in new_schedules:
                     db.session.add(schedule)
                 db.session.commit()
-                flash(f'Advanced schedule generated successfully. {len(new_schedules)} shifts created.', 'success')
+                flash(f'Advanced schedule generated successfully. {len(new_schedules)} schedule blocks created.', 'success')
             
             # Fetch the generated schedules for display
             team = Team.query.get(team_id)

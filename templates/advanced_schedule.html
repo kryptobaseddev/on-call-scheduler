@@ -35,19 +35,19 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Date</th>
                         <th>User</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Duration (Days)</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for schedule in schedules %}
                     <tr>
-                        <td>{{ schedule.start_time.strftime('%Y-%m-%d') }}</td>
                         <td>{{ schedule.user.username }}</td>
-                        <td>{{ schedule.start_time.strftime('%H:%M') }}</td>
-                        <td>{{ schedule.end_time.strftime('%H:%M') }}</td>
+                        <td>{{ schedule.start_time.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ schedule.end_time.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ (schedule.end_time - schedule.start_time).days }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
