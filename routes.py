@@ -143,6 +143,8 @@ def manage_users():
         logger.info(f"User {current_user.username} accessing manage users page")
         users = db_session.query(User).all()
         teams = db_session.query(Team).all()
+        logger.debug(f"Retrieved users: {[user.username for user in users]}")
+        logger.debug(f"Retrieved teams: {[team.name for team in teams]}")
         return render_template('user_management.html', users=users, teams=teams)
     except Exception as e:
         logger.error(f"Error in manage_users route: {str(e)}")
@@ -160,6 +162,8 @@ def manage_teams():
         logger.info(f"User {current_user.username} accessing manage teams page")
         teams = db_session.query(Team).all()
         managers = db_session.query(User).filter(User.role.in_(['manager', 'admin'])).all()
+        logger.debug(f"Retrieved teams: {[team.name for team in teams]}")
+        logger.debug(f"Retrieved managers: {[manager.username for manager in managers]}")
         return render_template('team_management.html', teams=teams, managers=managers)
     except Exception as e:
         logger.error(f"Error in manage_teams route: {str(e)}")
