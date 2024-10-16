@@ -97,3 +97,69 @@ def analytics_dashboard():
                            time_off_status=time_off_status,
                            time_off_trends=time_off_trends,
                            user_activity=user_activity)
+
+@admin.route('/manage_users')
+@login_required
+@admin_required
+def manage_users():
+    users = User.query.all()
+    teams = Team.query.all()
+    return render_template('user_management.html', users=users, teams=teams)
+
+@admin.route('/manage_users', methods=['POST'])
+@login_required
+@admin_required
+def add_user():
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    role = request.form.get('role')
+    team_id = request.form.get('team_id')
+
+    new_user = User(username=username, email=email, role=role)
+    new_user.set_password(password)
+    if team_id:
+        new_user.team_id = int(team_id)
+
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+        flash('User added successfully', 'success')
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Error adding user: ' + str(e), 'error')
+
+    return redirect(url_for('admin.manage_users'))
+
+@admin.route('/custom_report', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def custom_report():
+    if request.method == 'POST':
+        report_type = request.form.get('report_type')
+        start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')
+        end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')
+
+        if report_type == 'user_hours':
+            report_data = db.session.query(
+                User.username,
+                func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
+            ).join(Schedule).filter(Schedule.start_time >= start_date, Schedule.end_time <= end_date).group_by(User.username).all()
+        elif report_type == 'team_hours':
+            report_data = db.session.query(
+                Team.name,
+                func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
+            ).join(User).join(Schedule).filter(Schedule.start_time >= start_date, Schedule.end_time <= end_date).group_by(Team.name).all()
+        elif report_type == 'time_off_requests':
+            report_data = db.session.query(
+                User.username,
+                TimeOffRequest.start_date,
+                TimeOffRequest.end_date,
+                TimeOffRequest.status
+            ).join(TimeOffRequest).filter(TimeOffRequest.start_date >= start_date, TimeOffRequest.end_date <= end_date).all()
+        else:
+            report_data = []
+
+        return render_template('custom_report.html', report_type=report_type, report_data=report_data, start_date=start_date, end_date=end_date)
+
+    return render_template('custom_report.html')

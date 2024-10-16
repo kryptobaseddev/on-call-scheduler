@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Custom Report</h1>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Generate Custom Report</h5>
+            <form action="{{ url_for('admin.custom_report') }}" method="POST">
+                <div class="mb-3">
+                    <label for="report_type" class="form-label">Report Type</label>
+                    <select class="form-select" id="report_type" name="report_type" required>
+                        <option value="user_hours">User On-Call Hours</option>
+                        <option value="team_hours">Team On-Call Hours</option>
+                        <option value="time_off_requests">Time Off Requests</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                </div>
+                <div class="mb-3">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Generate Report</button>
+            </form>
+        </div>
+    </div>
+
+    {% if report_data %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Report Results</h5>
+            <p>Report Type: {{ report_type }}</p>
+            <p>Date Range: {{ start_date.strftime('%Y-%m-%d') }} to {{ end_date.strftime('%Y-%m-%d') }}</p>
+            
+            {% if report_type == 'user_hours' or report_type == 'team_hours' %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>{% if report_type == 'user_hours' %}User{% else %}Team{% endif %}</th>
+                        <th>Total Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report_data %}
+                    <tr>
+                        <td>{{ item[0] }}</td>
+                        <td>{{ "%.2f"|format(item[1]) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% elif report_type == 'time_off_requests' %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report_data %}
+                    <tr>
+                        <td>{{ item[0] }}</td>
+                        <td>{{ item[1].strftime('%Y-%m-%d') }}</td>
+                        <td>{{ item[2].strftime('%Y-%m-d') }}</td>
+                        <td>{{ item[3] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
