@@ -86,37 +86,72 @@ def analytics_dashboard():
             logger.error(f"Database connection error: {str(e)}")
             raise
 
-        total_users = db_session.query(User).count()
-        total_teams = db_session.query(Team).count()
-        total_schedules = db_session.query(Schedule).count()
+        logger.debug("Executing total_users query")
+        total_users_query = db_session.query(User)
+        logger.debug(f"SQL Query for total_users: {total_users_query}")
+        total_users = total_users_query.count()
+        logger.debug(f"Total users: {total_users}")
+
+        logger.debug("Executing total_teams query")
+        total_teams_query = db_session.query(Team)
+        logger.debug(f"SQL Query for total_teams: {total_teams_query}")
+        total_teams = total_teams_query.count()
+        logger.debug(f"Total teams: {total_teams}")
+
+        logger.debug("Executing total_schedules query")
+        total_schedules_query = db_session.query(Schedule)
+        logger.debug(f"SQL Query for total_schedules: {total_schedules_query}")
+        total_schedules = total_schedules_query.count()
+        logger.debug(f"Total schedules: {total_schedules}")
 
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-
-        user_hours = db_session.query(
+        logger.debug(f"Calculating statistics for the last 30 days (since {thirty_days_ago})")
+        
+        logger.debug("Executing user_hours query")
+        user_hours_query = db_session.query(
             User.username,
             func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
-        ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username).all()
+        ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username)
+        logger.debug(f"SQL Query for user_hours: {user_hours_query}")
+        user_hours = user_hours_query.all()
+        logger.debug(f"User hours: {user_hours}")
 
-        team_hours = db_session.query(
+        logger.debug("Executing team_hours query")
+        team_hours_query = db_session.query(
             Team.name,
             func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
-        ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name).all()
+        ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name)
+        logger.debug(f"SQL Query for team_hours: {team_hours_query}")
+        team_hours = team_hours_query.all()
+        logger.debug(f"Team hours: {team_hours}")
 
-        time_off_status = db_session.query(
+        logger.debug("Executing time_off_status query")
+        time_off_status_query = db_session.query(
             TimeOffRequest.status,
             func.count(TimeOffRequest.id)
-        ).group_by(TimeOffRequest.status).all()
+        ).group_by(TimeOffRequest.status)
+        logger.debug(f"SQL Query for time_off_status: {time_off_status_query}")
+        time_off_status = time_off_status_query.all()
+        logger.debug(f"Time off status: {time_off_status}")
 
         six_months_ago = datetime.utcnow() - timedelta(days=180)
-        time_off_trends = db_session.query(
+        logger.debug(f"Calculating time off trends for the last 6 months (since {six_months_ago})")
+        time_off_trends_query = db_session.query(
             func.date_trunc('month', TimeOffRequest.start_date).label('month'),
             func.count(TimeOffRequest.id)
-        ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month').all()
+        ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month')
+        logger.debug(f"SQL Query for time_off_trends: {time_off_trends_query}")
+        time_off_trends = time_off_trends_query.all()
+        logger.debug(f"Time off trends: {time_off_trends}")
 
-        user_activity = db_session.query(
+        logger.debug("Executing user_activity query")
+        user_activity_query = db_session.query(
             User.username,
             func.count(UserActivity.id).label('login_count')
-        ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
+        ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username)
+        logger.debug(f"SQL Query for user_activity: {user_activity_query}")
+        user_activity = user_activity_query.all()
+        logger.debug(f"User activity: {user_activity}")
 
         template_data = {
             'total_users': total_users,
