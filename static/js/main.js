@@ -15,14 +15,22 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
-                if (data.msg === "Login successful") {
-                    window.location.href = '/dashboard';
+                if (data.status === "success") {
+                    window.location.href = data.redirect;
                 } else {
-                    alert('Login failed. Please try again.');
+                    // Display error message
+                    const errorMessage = document.getElementById('error-message');
+                    if (errorMessage) {
+                        errorMessage.textContent = data.message;
+                        errorMessage.style.display = 'block';
+                    } else {
+                        alert(data.message);
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                alert('An error occurred. Please try again.');
             });
         });
     }

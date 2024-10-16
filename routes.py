@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import User, Team, Schedule, Note
@@ -6,12 +6,16 @@ from app import db
 from datetime import datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
 from scheduling_algorithm import generate_advanced_schedule
+import logging
 
 main = Blueprint('main', __name__)
 auth = Blueprint('auth', __name__)
 admin = Blueprint('admin', __name__)
 manager = Blueprint('manager', __name__)
 user = Blueprint('user', __name__)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @main.route('/')
 def index():
@@ -27,8 +31,10 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
-            return redirect(url_for('main.dashboard'))
-        flash('Invalid username or password', 'error')
+            return jsonify({"status": "success", "message": "Login successful", "redirect": url_for('main.dashboard')})
+        else:
+            logger.warning(f"Failed login attempt for username: {username}")
+            return jsonify({"status": "error", "message": "Invalid username or password"}), 401
     return render_template('login.html')
 
 @auth.route('/logout')
