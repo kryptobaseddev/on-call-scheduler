@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from models import User, Schedule, Team, TimeOffRequest
 from sqlalchemy import func
+import random
 
 def generate_advanced_schedule(team_id, start_date, end_date):
     """
@@ -42,6 +43,7 @@ def generate_advanced_schedule(team_id, start_date, end_date):
     
     schedules = []
     current_date = start_date
+    rotation_index = 0
     
     while current_date <= end_date:
         # Filter out unavailable users for the current date
@@ -52,47 +54,39 @@ def generate_advanced_schedule(team_id, start_date, end_date):
             current_date += timedelta(days=1)
             continue
         
-        # Select the user with the least on-call hours
-        selected_user = available_users[0]
+        # Use rotation system to ensure fairness
+        selected_user = available_users[rotation_index % len(available_users)]
         
-        # Determine the length of the block schedule (aiming for 7-day blocks)
-        block_length = min(7, (end_date - current_date).days + 1)
+        # Determine the length of the block schedule (aiming for 3-5 day blocks)
+        block_length = random.randint(3, 5)
         block_end = min(current_date + timedelta(days=block_length), end_date)
         
         # Check if the selected user is available for the entire block
-        while block_length > 3 and any(date in unavailable_dates[selected_user.id] for date in [current_date + timedelta(days=i) for i in range(block_length)]):
+        while any(date in unavailable_dates[selected_user.id] for date in [current_date + timedelta(days=i) for i in range(block_length)]):
             block_length -= 1
+            if block_length < 3:
+                # If we can't find a 3-day block, move to the next user
+                rotation_index += 1
+                selected_user = available_users[rotation_index % len(available_users)]
+                block_length = random.randint(3, 5)
             block_end = min(current_date + timedelta(days=block_length), end_date)
         
-        if block_length < 3:
-            # If we can't find a 3-day block, find the longest possible block (up to 7 days)
-            for length in range(7, 2, -1):
-                if not any(date in unavailable_dates[selected_user.id] for date in [current_date + timedelta(days=i) for i in range(length)]):
-                    block_length = length
-                    break
-            if block_length < 3:
-                # If still no 3-day block, move to the next day
-                current_date += timedelta(days=1)
-                continue
+        # Create a new schedule block
+        new_schedule = Schedule(
+            user_id=selected_user.id,
+            start_time=current_date,
+            end_time=block_end
+        )
+        schedules.append(new_schedule)
         
-        # This condition is now always true due to the changes above
-        if block_length >= 3:
-            # Create a new schedule block
-            new_schedule = Schedule(
-                user_id=selected_user.id,
-                start_time=current_date,
-                end_time=current_date + timedelta(days=block_length)
-            )
-            schedules.append(new_schedule)
-            
-            # Update the user's on-call hours
-            user_hours[selected_user.id] += block_length * 24
-            
-            # Move the current date to the end of the block
-            current_date += timedelta(days=block_length)
-        else:
-            # This else block is no longer necessary, but kept for safety
-            current_date += timedelta(days=1)
+        # Update the user's on-call hours
+        user_hours[selected_user.id] += (block_end - current_date).total_seconds() / 3600
+        
+        # Move the current date to the end of the block
+        current_date = block_end + timedelta(days=1)
+        
+        # Move to the next user in the rotation
+        rotation_index += 1
         
         # Re-sort the users based on updated hours
         sorted_users = sorted(sorted_users, key=lambda u: user_hours[u.id])

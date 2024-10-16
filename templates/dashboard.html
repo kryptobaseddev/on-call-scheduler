@@ -8,14 +8,14 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">My Schedule</h5>
+                    <h5 class="card-title">My Upcoming On-Call Dates</h5>
                     <ul class="list-group">
                     {% for schedule in schedules %}
                         <li class="list-group-item">
                             {{ schedule.start_time.strftime('%Y-%m-%d %H:%M') }} - {{ schedule.end_time.strftime('%Y-%m-%d %H:%M') }}
                         </li>
                     {% else %}
-                        <li class="list-group-item">No scheduled shifts</li>
+                        <li class="list-group-item">No upcoming on-call shifts</li>
                     {% endfor %}
                     </ul>
                 </div>

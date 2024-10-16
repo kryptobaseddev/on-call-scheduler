@@ -20,6 +20,10 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="mb-3">
+                    <label for="color" class="form-label">Team Color</label>
+                    <input type="color" class="form-control form-control-color" id="color" name="color" value="{{ team.color }}" title="Choose team color">
+                </div>
                 <button type="submit" class="btn btn-primary">Update Team</button>
                 <a href="{{ url_for('admin.manage_teams') }}" class="btn btn-secondary">Cancel</a>
             </form>

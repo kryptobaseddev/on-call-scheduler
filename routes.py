@@ -46,7 +46,7 @@ def logout():
 @main.route('/dashboard')
 @login_required
 def dashboard():
-    end_date = datetime.utcnow() + timedelta(days=7)
+    end_date = datetime.utcnow() + timedelta(days=30)  # Show schedules for the next 30 days
     schedules = Schedule.query.filter_by(user_id=current_user.id).filter(Schedule.start_time <= end_date).order_by(Schedule.start_time).all()
     notes = Note.query.filter_by(team_id=current_user.team_id).order_by(Note.created_at.desc()).limit(5).all()
     return render_template('dashboard.html', schedules=schedules, notes=notes)
@@ -123,13 +123,14 @@ def manage_teams():
     if request.method == 'POST':
         name = request.form.get('name')
         manager_id = request.form.get('manager_id')
+        color = request.form.get('color')
 
         if Team.query.filter_by(name=name).first():
             flash('Team name already exists.', 'error')
         else:
             try:
                 manager_id = manager_id if manager_id else None
-                new_team = Team(name=name, manager_id=manager_id)
+                new_team = Team(name=name, manager_id=manager_id, color=color)
                 db.session.add(new_team)
                 db.session.commit()
                 flash('Team created successfully.', 'success')
@@ -154,6 +155,7 @@ def edit_team(team_id):
     if request.method == 'POST':
         team.name = request.form.get('name')
         team.manager_id = request.form.get('manager_id') or None
+        team.color = request.form.get('color')
 
         try:
             db.session.commit()
@@ -210,6 +212,13 @@ def advanced_schedule():
             if not new_schedules:
                 flash('No schedules could be generated. Please check team members and their availability.', 'warning')
             else:
+                # Delete existing schedules for the team within the date range
+                existing_schedules = Schedule.query.join(User).filter(
+                    User.team_id == team_id,
+                    Schedule.start_time >= start_date,
+                    Schedule.end_time <= end_date
+                ).delete(synchronize_session=False)
+
                 for schedule in new_schedules:
                     db.session.add(schedule)
                 db.session.commit()

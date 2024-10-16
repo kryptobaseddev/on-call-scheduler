@@ -32,28 +32,38 @@
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Generated Schedule for {{ team.name }}</h5>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Duration (Days)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for schedule in schedules %}
-                    <tr>
-                        <td>{{ schedule.user.username }}</td>
-                        <td>{{ schedule.start_time.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ schedule.end_time.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ (schedule.end_time - schedule.start_time).days }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div id="calendar"></div>
         </div>
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js'></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        events: [
+            {% for schedule in schedules %}
+            {
+                title: '{{ schedule.user.username }}',
+                start: '{{ schedule.start_time.isoformat() }}',
+                end: '{{ schedule.end_time.isoformat() }}',
+                color: '{{ schedule.user.team.color if schedule.user.team else "#000000" }}'
+            },
+            {% endfor %}
+        ],
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek'
+        }
+    });
+    calendar.render();
+});
+</script>
 {% endblock %}

@@ -59,7 +59,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db migrate -m 'Add mobile_phone to User model'"
+args = "flask db migrate -m 'Add color to Team model and editable_by to Note model'"
 
 [[workflows.workflow]]
 name = "Apply Migration"

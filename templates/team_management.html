@@ -21,6 +21,10 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="mb-3">
+                    <label for="color" class="form-label">Team Color</label>
+                    <input type="color" class="form-control form-control-color" id="color" name="color" value="#000000" title="Choose team color">
+                </div>
                 <button type="submit" class="btn btn-primary">Add Team</button>
             </form>
         </div>
@@ -38,6 +42,7 @@
                         <th>Team Name</th>
                         <th>Manager</th>
                         <th>Members</th>
+                        <th>Color</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -47,6 +52,7 @@
                             <td>{{ team.name }}</td>
                             <td>{{ team.manager.username if team.manager else 'No Manager' }}</td>
                             <td>{{ team.users|length }}</td>
+                            <td><span class="color-preview" style="background-color: {{ team.color }};"></span></td>
                             <td>
                                 <a href="{{ url_for('admin.edit_team', team_id=team.id) }}" class="btn btn-sm btn-primary">Edit</a>
                             </td>
@@ -57,6 +63,16 @@
         </div>
     </div>
 </div>
+
+<style>
+    .color-preview {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid #ccc;
+    }
+</style>
 
 <script>
 document.getElementById('teamSearch').addEventListener('input', function(e) {

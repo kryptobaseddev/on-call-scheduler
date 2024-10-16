@@ -21,7 +21,7 @@ class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
     manager_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    color = db.Column(db.String(7), default="#000000")  # Hex color code
+    color = db.Column(db.String(7), default="#000000")  # New field for team color
     users = db.relationship('User', backref='team', lazy=True, foreign_keys=[User.team_id])
     manager = db.relationship('User', backref='managed_team', lazy=True, foreign_keys=[manager_id])
 
@@ -45,5 +45,5 @@ class Note(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    editable_by = db.Column(db.String(20), default='both')  # 'admin', 'manager', or 'both'
+    editable_by = db.Column(db.String(20), default='both')  # New field for note editing permissions
     team = db.relationship('Team', backref='notes', lazy=True)
