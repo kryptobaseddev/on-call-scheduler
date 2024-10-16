@@ -66,9 +66,16 @@ def analytics_dashboard():
     try:
         logger.info(f"User {current_user.username} accessing analytics dashboard")
         
+        logger.debug(f"Database URI: {db.engine.url}")
+        logger.debug(f"Database tables: {db.engine.table_names()}")
+        
         total_users = User.query.count()
         total_teams = Team.query.count()
         total_schedules = Schedule.query.count()
+
+        logger.debug(f"Total users: {total_users}")
+        logger.debug(f"Total teams: {total_teams}")
+        logger.debug(f"Total schedules: {total_schedules}")
 
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         
@@ -98,9 +105,6 @@ def analytics_dashboard():
             func.count(UserActivity.id).label('login_count')
         ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
 
-        logger.debug(f"Total users: {total_users}")
-        logger.debug(f"Total teams: {total_teams}")
-        logger.debug(f"Total schedules: {total_schedules}")
         logger.debug(f"User hours: {user_hours}")
         logger.debug(f"Team hours: {team_hours}")
         logger.debug(f"Time off status: {time_off_status}")
