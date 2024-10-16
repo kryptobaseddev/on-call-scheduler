@@ -234,16 +234,16 @@ def custom_report():
 @manager_required
 def manage_schedule():
     try:
-        logger.info(f"User {current_user.username} (role: {current_user.role}) accessing manage schedule page")
+        logger.info(f'User {current_user.username} (role: {current_user.role}) accessing manage schedule page')
         users = User.query.filter_by(team_id=current_user.team_id).all()
         schedules = Schedule.query.join(User).filter(User.team_id == current_user.team_id).all()
         return render_template('schedule.html', users=users, schedules=schedules)
     except SQLAlchemyError as e:
-        logger.error(f"Database error in manage_schedule: {str(e)}")
+        logger.error(f'Database error in manage_schedule: {str(e)}')
         flash('Unable to retrieve schedule data. Please try again later.', 'error')
         return render_template('schedule.html', users=[], schedules=[])
     except Exception as e:
-        logger.error(f"Unexpected error in manage_schedule: {str(e)}")
+        logger.error(f'Unexpected error in manage_schedule: {str(e)}')
         flash('An unexpected error occurred. Please try again later.', 'error')
         return render_template('schedule.html', users=[], schedules=[])
 
