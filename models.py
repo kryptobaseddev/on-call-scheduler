@@ -1,6 +1,7 @@
 from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -47,3 +48,10 @@ class Note(db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
     editable_by = db.Column(db.String(20), default='both')  # New field for note editing permissions
     team = db.relationship('Team', backref='notes', lazy=True)
+
+class UserActivity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    activity_type = db.Column(db.String(50), nullable=False)  # e.g., 'login', 'logout', etc.
+    user = db.relationship('User', backref='activities', lazy=True)

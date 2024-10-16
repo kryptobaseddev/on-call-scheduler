@@ -1,12 +1,14 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from models import User, Team, Schedule, Note
+from models import User, Team, Schedule, Note, TimeOffRequest, UserActivity
 from app import db
 from datetime import datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
 from scheduling_algorithm import generate_advanced_schedule
 import logging
+from sqlalchemy import func
+from utils import admin_required
 
 main = Blueprint('main', __name__)
 auth = Blueprint('auth', __name__)
@@ -18,10 +20,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @main.route('/')
+@login_required
 def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
-    return render_template('login.html')
+    return render_template('dashboard.html')
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -29,220 +30,64 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password_hash, password):
+        if user and user.check_password(password):
             login_user(user)
-            return jsonify({"status": "success", "message": "Login successful", "redirect": url_for('main.dashboard')})
+            # Record the login activity
+            new_activity = UserActivity(user_id=user.id, activity_type='login')
+            db.session.add(new_activity)
+            db.session.commit()
+            return redirect(url_for('main.index'))
         else:
-            logger.warning(f"Failed login attempt for username: {username}")
-            return jsonify({"status": "error", "message": "Invalid username or password"}), 401
+            flash('Invalid username or password')
     return render_template('login.html')
 
-@auth.route('/logout')
+@admin.route('/analytics')
 @login_required
-def logout():
-    logout_user()
-    return redirect(url_for('main.index'))
+@admin_required
+def analytics_dashboard():
+    total_users = User.query.count()
+    total_teams = Team.query.count()
+    total_schedules = Schedule.query.count()
 
-@main.route('/dashboard')
-@login_required
-def dashboard():
-    end_date = datetime.utcnow() + timedelta(days=30)  # Show schedules for the next 30 days
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     
-    # Fetch all schedules, not just the current user's
-    all_schedules = Schedule.query.filter(Schedule.start_time <= end_date).order_by(Schedule.start_time).all()
-    
-    # Fetch the current user's schedules separately
-    user_schedules = [s for s in all_schedules if s.user_id == current_user.id]
-    
-    notes = Note.query.filter_by(team_id=current_user.team_id).order_by(Note.created_at.desc()).limit(5).all()
-    teams = Team.query.all()
-    return render_template('dashboard.html', all_schedules=all_schedules, user_schedules=user_schedules, notes=notes, teams=teams)
+    # User on-call hours in the last 30 days
+    user_hours = db.session.query(
+        User.username,
+        func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
+    ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username).all()
 
-@admin.route('/users', methods=['GET', 'POST'])
-@login_required
-def manage_users():
-    if current_user.role != 'admin':
-        flash('Access denied. Admin privileges required.', 'error')
-        return redirect(url_for('main.dashboard'))
+    # Team on-call hours in the last 30 days
+    team_hours = db.session.query(
+        Team.name,
+        func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
+    ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name).all()
 
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        role = request.form.get('role')
-        team_id = request.form.get('team_id') or None
+    # Time off request status
+    time_off_status = db.session.query(
+        TimeOffRequest.status,
+        func.count(TimeOffRequest.id)
+    ).group_by(TimeOffRequest.status).all()
 
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists.', 'error')
-        elif User.query.filter_by(email=email).first():
-            flash('Email already exists.', 'error')
-        else:
-            try:
-                new_user = User(username=username, email=email, role=role, team_id=team_id)
-                new_user.set_password(password)
-                db.session.add(new_user)
-                db.session.commit()
-                flash('User created successfully.', 'success')
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                flash('An error occurred while creating the user. Please try again.', 'error')
+    # Time off request trends (last 6 months)
+    six_months_ago = datetime.utcnow() - timedelta(days=180)
+    time_off_trends = db.session.query(
+        func.date_trunc('month', TimeOffRequest.start_date).label('month'),
+        func.count(TimeOffRequest.id)
+    ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month').all()
 
-    users = User.query.all()
-    teams = Team.query.all()
-    return render_template('user_management.html', users=users, teams=teams)
+    # User activity (logins in the last 30 days)
+    user_activity = db.session.query(
+        User.username,
+        func.count(UserActivity.id).label('login_count')
+    ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
 
-@admin.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
-@login_required
-def edit_user(user_id):
-    if current_user.role != 'admin':
-        flash('Access denied. Admin privileges required.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    user = User.query.get_or_404(user_id)
-    teams = Team.query.all()
-
-    if request.method == 'POST':
-        user.username = request.form.get('username')
-        user.email = request.form.get('email')
-        user.role = request.form.get('role')
-        user.team_id = request.form.get('team_id') or None
-
-        if request.form.get('password'):
-            user.set_password(request.form.get('password'))
-
-        try:
-            db.session.commit()
-            flash('User updated successfully.', 'success')
-            return redirect(url_for('admin.manage_users'))
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash('An error occurred while updating the user. Please try again.', 'error')
-
-    return render_template('edit_user.html', user=user, teams=teams)
-
-@admin.route('/teams', methods=['GET', 'POST'])
-@login_required
-def manage_teams():
-    if current_user.role != 'admin':
-        flash('Access denied. Admin privileges required.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    if request.method == 'POST':
-        name = request.form.get('name')
-        manager_id = request.form.get('manager_id')
-        color = request.form.get('color')
-
-        if Team.query.filter_by(name=name).first():
-            flash('Team name already exists.', 'error')
-        else:
-            try:
-                manager_id = manager_id if manager_id else None
-                new_team = Team(name=name, manager_id=manager_id, color=color)
-                db.session.add(new_team)
-                db.session.commit()
-                flash('Team created successfully.', 'success')
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                flash(f'An error occurred while creating the team: {str(e)}', 'error')
-
-    teams = Team.query.all()
-    managers = User.query.filter_by(role='manager').all()
-    return render_template('team_management.html', teams=teams, managers=managers)
-
-@admin.route('/teams/edit/<int:team_id>', methods=['GET', 'POST'])
-@login_required
-def edit_team(team_id):
-    if current_user.role != 'admin':
-        flash('Access denied. Admin privileges required.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    team = Team.query.get_or_404(team_id)
-    managers = User.query.filter_by(role='manager').all()
-
-    if request.method == 'POST':
-        team.name = request.form.get('name')
-        team.manager_id = request.form.get('manager_id') or None
-        team.color = request.form.get('color')
-
-        try:
-            db.session.commit()
-            flash('Team updated successfully.', 'success')
-            return redirect(url_for('admin.manage_teams'))
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash('An error occurred while updating the team. Please try again.', 'error')
-
-    return render_template('edit_team.html', team=team, managers=managers)
-
-@manager.route('/schedule', methods=['GET', 'POST'])
-@login_required
-def manage_schedule():
-    if current_user.role not in ['admin', 'manager']:
-        flash('Access denied. Manager privileges required.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    if request.method == 'POST':
-        user_id = request.form.get('user_id')
-        start_time = datetime.strptime(request.form.get('start_time'), '%Y-%m-%dT%H:%M')
-        end_time = datetime.strptime(request.form.get('end_time'), '%Y-%m-%dT%H:%M')
-
-        try:
-            new_schedule = Schedule(user_id=user_id, start_time=start_time, end_time=end_time)
-            db.session.add(new_schedule)
-            db.session.commit()
-            flash('Schedule created successfully.', 'success')
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash('An error occurred while creating the schedule. Please try again.', 'error')
-
-    team_id = current_user.team_id if current_user.role == 'manager' else None
-    users = User.query.filter_by(team_id=team_id).all() if team_id else User.query.all()
-    schedules = Schedule.query.join(User).filter(User.team_id == team_id).all() if team_id else Schedule.query.all()
-    return render_template('schedule.html', users=users, schedules=schedules)
-
-@manager.route('/advanced_schedule', methods=['GET', 'POST'])
-@login_required
-def advanced_schedule():
-    if current_user.role not in ['admin', 'manager']:
-        flash('Access denied. Admin or Manager privileges required.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    teams = Team.query.all()
-
-    if request.method == 'POST':
-        team_id = request.form.get('team_id')
-        start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')
-        end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')
-
-        try:
-            new_schedules = generate_advanced_schedule(team_id, start_date, end_date)
-            if not new_schedules:
-                flash('No schedules could be generated. Please check team members and their availability.', 'warning')
-            else:
-                # Delete existing schedules for the team within the date range
-                existing_schedules = Schedule.query.join(User).filter(
-                    User.team_id == team_id,
-                    Schedule.start_time >= start_date,
-                    Schedule.end_time <= end_date
-                ).delete(synchronize_session=False)
-
-                for schedule in new_schedules:
-                    db.session.add(schedule)
-                db.session.commit()
-                flash(f'Advanced schedule generated successfully. {len(new_schedules)} schedule blocks created.', 'success')
-            
-            # Fetch the generated schedules for display
-            team = Team.query.get(team_id)
-            schedules = Schedule.query.join(User).filter(
-                User.team_id == team_id,
-                Schedule.start_time >= start_date,
-                Schedule.end_time <= end_date
-            ).order_by(Schedule.start_time).all()
-            
-            return render_template('advanced_schedule.html', teams=teams, schedules=schedules, team=team)
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logging.error(f"Error generating advanced schedule: {str(e)}")
-            flash('An error occurred while generating the schedule. Please try again.', 'error')
-
-    return render_template('advanced_schedule.html', teams=teams)
+    return render_template('analytics_dashboard.html',
+                           total_users=total_users,
+                           total_teams=total_teams,
+                           total_schedules=total_schedules,
+                           user_hours=user_hours,
+                           team_hours=team_hours,
+                           time_off_status=time_off_status,
+                           time_off_trends=time_off_trends,
+                           user_activity=user_activity)
