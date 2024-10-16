@@ -25,7 +25,21 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin.analytics_dashboard') }}">Analytics</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.manage_users') }}">Manage Users</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.manage_teams') }}">Manage Teams</a>
+                        </li>
                         {% endif %}
+                        {% if current_user.role in ['admin', 'manager'] %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('manager.manage_schedule') }}">Manage Schedule</a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('user.time_off_request') }}">Time Off Request</a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
                         </li>

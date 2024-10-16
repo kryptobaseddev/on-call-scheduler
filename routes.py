@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from scheduling_algorithm import generate_advanced_schedule
 import logging
 from sqlalchemy import func
-from utils import admin_required
+from utils import admin_required, manager_required
 
 main = Blueprint('main', __name__)
 auth = Blueprint('auth', __name__)
@@ -22,7 +22,10 @@ logger = logging.getLogger(__name__)
 @main.route('/')
 @login_required
 def index():
-    return render_template('dashboard.html')
+    user_schedules = Schedule.query.filter_by(user_id=current_user.id).all()
+    all_schedules = Schedule.query.all()
+    notes = Note.query.filter_by(team_id=current_user.team_id).all()
+    return render_template('dashboard.html', user_schedules=user_schedules, all_schedules=all_schedules, notes=notes)
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -131,6 +134,36 @@ def add_user():
 
     return redirect(url_for('admin.manage_users'))
 
+@admin.route('/manage_teams')
+@login_required
+@admin_required
+def manage_teams():
+    teams = Team.query.all()
+    managers = User.query.filter_by(role='manager').all()
+    return render_template('team_management.html', teams=teams, managers=managers)
+
+@admin.route('/manage_teams', methods=['POST'])
+@login_required
+@admin_required
+def add_team():
+    name = request.form.get('name')
+    manager_id = request.form.get('manager_id')
+    color = request.form.get('color')
+
+    new_team = Team(name=name, color=color)
+    if manager_id:
+        new_team.manager_id = int(manager_id)
+
+    try:
+        db.session.add(new_team)
+        db.session.commit()
+        flash('Team added successfully', 'success')
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Error adding team: ' + str(e), 'error')
+
+    return redirect(url_for('admin.manage_teams'))
+
 @admin.route('/custom_report', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -163,3 +196,58 @@ def custom_report():
         return render_template('custom_report.html', report_type=report_type, report_data=report_data, start_date=start_date, end_date=end_date)
 
     return render_template('custom_report.html')
+
+@manager.route('/manage_schedule')
+@login_required
+@manager_required
+def manage_schedule():
+    users = User.query.filter_by(team_id=current_user.team_id).all()
+    schedules = Schedule.query.join(User).filter(User.team_id == current_user.team_id).all()
+    return render_template('schedule.html', users=users, schedules=schedules)
+
+@manager.route('/advanced_schedule', methods=['GET', 'POST'])
+@login_required
+@manager_required
+def advanced_schedule():
+    teams = Team.query.all()
+    if request.method == 'POST':
+        team_id = request.form.get('team_id')
+        start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')
+        end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')
+        
+        schedules = generate_advanced_schedule(team_id, start_date, end_date)
+        
+        for schedule in schedules:
+            db.session.add(schedule)
+        
+        try:
+            db.session.commit()
+            flash('Advanced schedule generated successfully', 'success')
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash('Error generating schedule: ' + str(e), 'error')
+        
+        return redirect(url_for('manager.manage_schedule'))
+    
+    return render_template('advanced_schedule.html', teams=teams)
+
+@user.route('/time_off', methods=['GET', 'POST'])
+@login_required
+def time_off_request():
+    if request.method == 'POST':
+        start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')
+        end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')
+        
+        new_request = TimeOffRequest(user_id=current_user.id, start_date=start_date, end_date=end_date)
+        
+        try:
+            db.session.add(new_request)
+            db.session.commit()
+            flash('Time-off request submitted successfully', 'success')
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash('Error submitting time-off request: ' + str(e), 'error')
+        
+        return redirect(url_for('main.index'))
+    
+    return render_template('time_off_request.html')
