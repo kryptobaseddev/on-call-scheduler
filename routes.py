@@ -48,9 +48,9 @@ def login():
             except SQLAlchemyError as e:
                 logger.error(f"Error recording login activity: {str(e)}")
                 db.session.rollback()
-            return redirect(url_for('main.index'))
+            return jsonify(status="success", redirect=url_for('main.index'))
         else:
-            flash('Invalid username or password')
+            return jsonify(status="error", message="Invalid username or password"), 401
     return render_template('login.html')
 
 @auth.route('/logout')

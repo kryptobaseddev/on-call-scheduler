@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.status === "success") {
                     window.location.href = data.redirect;
                 } else {
-                    // Display error message
                     const errorMessage = document.getElementById('error-message');
                     if (errorMessage) {
                         errorMessage.textContent = data.message;
