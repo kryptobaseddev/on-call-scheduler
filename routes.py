@@ -78,72 +78,103 @@ def analytics_dashboard():
             logger.error(f"Database connection error: {str(e)}")
             raise
 
-        user_count = db_session.query(func.count(User.id)).scalar()
-        team_count = db_session.query(func.count(Team.id)).scalar()
-        schedule_count = db_session.query(func.count(Schedule.id)).scalar()
-        logger.info(f"Data verification: Users: {user_count}, Teams: {team_count}, Schedules: {schedule_count}")
+        # Total Users
+        try:
+            total_users_query = db_session.query(User).statement
+            logger.debug(f"SQL Query for total users: {total_users_query}")
+            total_users = db_session.query(User).count()
+            logger.debug(f"Query result: Total users: {total_users}")
+        except SQLAlchemyError as e:
+            logger.error(f"Error querying total users: {str(e)}")
+            total_users = 0
 
-        if user_count == 0 or team_count == 0 or schedule_count == 0:
-            logger.warning("One or more tables have no data")
+        # Total Teams
+        try:
+            total_teams_query = db_session.query(Team).statement
+            logger.debug(f"SQL Query for total teams: {total_teams_query}")
+            total_teams = db_session.query(Team).count()
+            logger.debug(f"Query result: Total teams: {total_teams}")
+        except SQLAlchemyError as e:
+            logger.error(f"Error querying total teams: {str(e)}")
+            total_teams = 0
 
-        total_users = db_session.query(User).count()
-        logger.debug(f"SQL Query: {db_session.query(User).statement}")
-        logger.debug(f"Query result: Total users: {total_users}")
-
-        total_teams = db_session.query(Team).count()
-        logger.debug(f"SQL Query: {db_session.query(Team).statement}")
-        logger.debug(f"Query result: Total teams: {total_teams}")
-
-        total_schedules = db_session.query(Schedule).count()
-        logger.debug(f"SQL Query: {db_session.query(Schedule).statement}")
-        logger.debug(f"Query result: Total schedules: {total_schedules}")
+        # Total Schedules
+        try:
+            total_schedules_query = db_session.query(Schedule).statement
+            logger.debug(f"SQL Query for total schedules: {total_schedules_query}")
+            total_schedules = db_session.query(Schedule).count()
+            logger.debug(f"Query result: Total schedules: {total_schedules}")
+        except SQLAlchemyError as e:
+            logger.error(f"Error querying total schedules: {str(e)}")
+            total_schedules = 0
 
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        user_hours_query = db_session.query(
-            User.username,
-            func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
-        ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username)
-        
-        logger.debug(f"SQL Query: {user_hours_query.statement}")
-        user_hours = user_hours_query.all()
-        logger.debug(f"Query result: User hours: {user_hours}")
 
-        team_hours_query = db_session.query(
-            Team.name,
-            func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
-        ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name)
-        
-        logger.debug(f"SQL Query: {team_hours_query.statement}")
-        team_hours = team_hours_query.all()
-        logger.debug(f"Query result: Team hours: {team_hours}")
+        # User Hours
+        try:
+            user_hours_query = db_session.query(
+                User.username,
+                func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
+            ).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(User.username)
+            logger.debug(f"SQL Query for user hours: {user_hours_query}")
+            user_hours = user_hours_query.all()
+            logger.debug(f"Query result: User hours: {user_hours}")
+        except SQLAlchemyError as e:
+            logger.error(f"Error querying user hours: {str(e)}")
+            user_hours = []
 
-        time_off_status_query = db_session.query(
-            TimeOffRequest.status,
-            func.count(TimeOffRequest.id)
-        ).group_by(TimeOffRequest.status)
-        
-        logger.debug(f"SQL Query: {time_off_status_query.statement}")
-        time_off_status = time_off_status_query.all()
-        logger.debug(f"Query result: Time off status: {time_off_status}")
+        # Team Hours
+        try:
+            team_hours_query = db_session.query(
+                Team.name,
+                func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
+            ).join(User).join(Schedule).filter(Schedule.start_time >= thirty_days_ago).group_by(Team.name)
+            logger.debug(f"SQL Query for team hours: {team_hours_query}")
+            team_hours = team_hours_query.all()
+            logger.debug(f"Query result: Team hours: {team_hours}")
+        except SQLAlchemyError as e:
+            logger.error(f"Error querying team hours: {str(e)}")
+            team_hours = []
 
-        six_months_ago = datetime.utcnow() - timedelta(days=180)
-        time_off_trends_query = db_session.query(
-            func.date_trunc('month', TimeOffRequest.start_date).label('month'),
-            func.count(TimeOffRequest.id)
-        ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month')
-        
-        logger.debug(f"SQL Query: {time_off_trends_query.statement}")
-        time_off_trends = time_off_trends_query.all()
-        logger.debug(f"Query result: Time off trends: {time_off_trends}")
+        # Time Off Status
+        try:
+            time_off_status_query = db_session.query(
+                TimeOffRequest.status,
+                func.count(TimeOffRequest.id)
+            ).group_by(TimeOffRequest.status)
+            logger.debug(f"SQL Query for time off status: {time_off_status_query}")
+            time_off_status = time_off_status_query.all()
+            logger.debug(f"Query result: Time off status: {time_off_status}")
+        except SQLAlchemyError as e:
+            logger.error(f"Error querying time off status: {str(e)}")
+            time_off_status = []
 
-        user_activity_query = db_session.query(
-            User.username,
-            func.count(UserActivity.id).label('login_count')
-        ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username)
-        
-        logger.debug(f"SQL Query: {user_activity_query.statement}")
-        user_activity = user_activity_query.all()
-        logger.debug(f"Query result: User activity: {user_activity}")
+        # Time Off Trends
+        try:
+            six_months_ago = datetime.utcnow() - timedelta(days=180)
+            time_off_trends_query = db_session.query(
+                func.date_trunc('month', TimeOffRequest.start_date).label('month'),
+                func.count(TimeOffRequest.id)
+            ).filter(TimeOffRequest.start_date >= six_months_ago).group_by('month').order_by('month')
+            logger.debug(f"SQL Query for time off trends: {time_off_trends_query}")
+            time_off_trends = time_off_trends_query.all()
+            logger.debug(f"Query result: Time off trends: {time_off_trends}")
+        except SQLAlchemyError as e:
+            logger.error(f"Error querying time off trends: {str(e)}")
+            time_off_trends = []
+
+        # User Activity
+        try:
+            user_activity_query = db_session.query(
+                User.username,
+                func.count(UserActivity.id).label('login_count')
+            ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username)
+            logger.debug(f"SQL Query for user activity: {user_activity_query}")
+            user_activity = user_activity_query.all()
+            logger.debug(f"Query result: User activity: {user_activity}")
+        except SQLAlchemyError as e:
+            logger.error(f"Error querying user activity: {str(e)}")
+            user_activity = []
 
         template_data = {
             'total_users': total_users,
