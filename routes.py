@@ -73,7 +73,6 @@ def analytics_dashboard():
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         six_months_ago = datetime.utcnow() - timedelta(days=180)
 
-        # Combine queries for better performance
         analytics_data = db_session.query(
             func.count(func.distinct(User.id)).label('total_users'),
             func.count(func.distinct(Team.id)).label('total_teams'),
@@ -139,4 +138,19 @@ def analytics_dashboard():
     finally:
         db_session.close()
 
-# Add other routes here (manager, user)
+@admin.route('/manage_users')
+@login_required
+@admin_required
+def manage_users():
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        logger.info(f"User {current_user.username} accessing manage users page")
+        users = db_session.query(User).all()
+        teams = db_session.query(Team).all()
+        return render_template('user_management.html', users=users, teams=teams)
+    except Exception as e:
+        logger.error(f"Error in manage_users route: {str(e)}")
+        flash('An error occurred while loading user management.', 'error')
+        return render_template('user_management.html')
+    finally:
+        db_session.close()
