@@ -49,10 +49,20 @@ def index():
         
         logger.debug("Rendering dashboard template")
         return render_template('dashboard.html', user_schedules=user_schedules, all_schedules=all_schedules, notes=notes)
-    except Exception as e:
-        logger.error(f"Error in index route: {str(e)}")
+    except OperationalError as e:
+        logger.error(f"Database connection error in index route: {str(e)}")
         logger.error(traceback.format_exc())
-        flash('An error occurred while loading the dashboard.', 'error')
+        flash('A database error occurred. Please try again later.', 'error')
+        return render_template('dashboard.html')
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in index route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while processing your request.', 'error')
+        return render_template('dashboard.html')
+    except Exception as e:
+        logger.error(f"Unexpected error in index route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An unexpected error occurred. Please try again later.', 'error')
         return render_template('dashboard.html')
     finally:
         db_session.close()
@@ -62,11 +72,31 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password_hash, password):
-            login_user(user)
-            return redirect(url_for('main.index'))
-        flash('Invalid username or password')
+        logger.debug(f"Login attempt for username: {username}")
+        
+        try:
+            user = User.query.filter_by(username=username).first()
+            if user:
+                logger.debug(f"User found: {user.username}")
+                if check_password_hash(user.password_hash, password):
+                    logger.info(f"Successful login for user: {user.username}")
+                    login_user(user)
+                    return redirect(url_for('main.index'))
+                else:
+                    logger.warning(f"Failed login attempt for user: {user.username} - Invalid password")
+            else:
+                logger.warning(f"Failed login attempt - User not found: {username}")
+            
+            flash('Invalid username or password')
+        except SQLAlchemyError as e:
+            logger.error(f"Database error during login: {str(e)}")
+            logger.error(traceback.format_exc())
+            flash('A database error occurred. Please try again later.', 'error')
+        except Exception as e:
+            logger.error(f"Unexpected error during login: {str(e)}")
+            logger.error(traceback.format_exc())
+            flash('An unexpected error occurred. Please try again later.', 'error')
+    
     return render_template('login.html')
 
 @auth.route('/logout')
@@ -108,7 +138,7 @@ def analytics_dashboard():
         if avg_schedule_hours is None:
             logger.warning("Average schedule hours is None, setting to 0")
             avg_schedule_hours = 0
-        logger.debug(f"Average schedule hours: {avg_schedule_hours}")
+        logger.debug(f"Average schedule hours: {avg_schedule_hours:.2f}")
 
         logger.debug("Fetching user hours")
         user_hours = db_session.query(

@@ -9,6 +9,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from urllib.parse import urlparse
 import logging
+import traceback
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -23,19 +24,25 @@ def create_app():
     app.config['JWT_TOKEN_LOCATION'] = ['headers']
 
     # Configure logging
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
 
     # Parse the DATABASE_URL
     url = urlparse(app.config['SQLALCHEMY_DATABASE_URI'])
+    logger.info(f"Connecting to database: {url.hostname}")
 
     # Create the SQLAlchemy engine with connection pooling
-    engine = create_engine(
-        app.config['SQLALCHEMY_DATABASE_URI'],
-        pool_size=10,
-        max_overflow=20,
-        pool_recycle=1800,
-    )
+    try:
+        engine = create_engine(
+            app.config['SQLALCHEMY_DATABASE_URI'],
+            pool_size=10,
+            max_overflow=20,
+            pool_recycle=1800,
+        )
+        logger.info("Database engine created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database engine: {str(e)}")
+        raise
 
     # Create a scoped session
     db_session = scoped_session(sessionmaker(bind=engine))
@@ -52,7 +59,11 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        try:
+            return User.query.get(int(user_id))
+        except SQLAlchemyError as e:
+            logger.error(f"Error loading user: {str(e)}")
+            return None
 
     with app.app_context():
         from models import User, Team, Schedule, TimeOffRequest, Note
@@ -73,5 +84,21 @@ def create_app():
     def handle_exception(e):
         logger.exception("Unhandled exception: %s", str(e))
         return render_template('500.html'), 500
+
+    # Database connection test
+    @app.before_request
+    def test_database_connection():
+        try:
+            db.session.execute('SELECT 1')
+            logger.debug("Database connection test successful")
+        except OperationalError as e:
+            logger.error(f"Database connection test failed: {str(e)}")
+            return "Database connection error", 500
+
+    @app.after_request
+    def after_request(response):
+        if response.status_code == 500:
+            logger.error(f"500 error occurred: {traceback.format_exc()}")
+        return response
 
     return app

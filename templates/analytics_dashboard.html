@@ -8,23 +8,23 @@
         <div class="card-body">
             <h5 class="card-title">Date Range Selection</h5>
             <form action="{{ url_for('admin.analytics_dashboard') }}" method="POST" class="row g-3">
-                <div class="col-auto">
-                    <label for="start_date" class="visually-hidden">Start Date</label>
+                <div class="col-md-4">
+                    <label for="start_date" class="form-label">Start Date</label>
                     <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date.strftime('%Y-%m-%d') }}" required>
                 </div>
-                <div class="col-auto">
-                    <label for="end_date" class="visually-hidden">End Date</label>
+                <div class="col-md-4">
+                    <label for="end_date" class="form-label">End Date</label>
                     <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date.strftime('%Y-%m-%d') }}" required>
                 </div>
-                <div class="col-auto">
+                <div class="col-md-4 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary">Update Dashboard</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-3 mb-4">
+    <div class="row mb-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Total Users</h5>
@@ -32,7 +32,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Total Teams</h5>
@@ -40,7 +40,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Total Schedules</h5>
@@ -48,7 +48,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Avg. Schedule Hours</h5>
@@ -58,8 +58,8 @@
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6 mb-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">On-Call Hours per User</h5>
@@ -67,7 +67,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-4">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">On-Call Hours per Team</h5>
@@ -77,8 +77,8 @@
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6 mb-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Time Off Request Status</h5>
@@ -86,7 +86,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-4">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Time Off Request Trends</h5>
@@ -97,7 +97,7 @@
     </div>
 
     <div class="row">
-        <div class="col-md-12 mb-4">
+        <div class="col-md-12">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">User Activity (Logins)</h5>
@@ -127,6 +127,7 @@
             }]
         },
         options: {
+            responsive: true,
             scales: {
                 y: {
                     beginAtZero: true,
@@ -160,7 +161,7 @@
             responsive: true,
             plugins: {
                 legend: {
-                    position: 'top',
+                    position: 'right',
                 },
                 title: {
                     display: true,
@@ -190,7 +191,7 @@
             responsive: true,
             plugins: {
                 legend: {
-                    position: 'top',
+                    position: 'right',
                 },
                 title: {
                     display: true,
@@ -205,7 +206,7 @@
     var timeOffTrendsChart = new Chart(timeOffTrendsCtx, {
         type: 'line',
         data: {
-            labels: [{% for month, count in time_off_trends %}'{{ month.strftime("%B %Y") }}',{% endfor %}],
+            labels: [{% for month, count in time_off_trends %}'{{ month.strftime("%b %Y") }}',{% endfor %}],
             datasets: [{
                 label: 'Time Off Requests',
                 data: [{% for month, count in time_off_trends %}{{ count }},{% endfor %}],
@@ -214,6 +215,7 @@
             }]
         },
         options: {
+            responsive: true,
             scales: {
                 y: {
                     beginAtZero: true,
@@ -241,6 +243,7 @@
             }]
         },
         options: {
+            responsive: true,
             scales: {
                 y: {
                     beginAtZero: true,
