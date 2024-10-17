@@ -5,7 +5,7 @@
     <h1 class="mb-4">Analytics Dashboard</h1>
 
     <div class="row">
-        <div class="col-md-4 mb-4">
+        <div class="col-md-3 mb-4">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Total Users</h5>
@@ -13,7 +13,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-3 mb-4">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Total Teams</h5>
@@ -21,11 +21,19 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-3 mb-4">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Total Schedules</h5>
                     <p class="card-text display-4">{{ total_schedules }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Avg. Schedule Hours</h5>
+                    <p class="card-text display-4">{{ avg_schedule_hours }}</p>
                 </div>
             </div>
         </div>

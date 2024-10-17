@@ -40,7 +40,7 @@ def create_app():
     jwt.init_app(app)
 
     login_manager = LoginManager()
-    login_manager.login_view = 'auth.login'
+    login_manager.login_view = 'auth.login'  # Make sure this matches the endpoint name
     login_manager.init_app(app)
 
     from models import User
@@ -53,9 +53,9 @@ def create_app():
         from models import User, Team, Schedule, TimeOffRequest, Note
         from routes import main, auth, admin, manager, user
         app.register_blueprint(main)
-        app.register_blueprint(auth)
+        app.register_blueprint(auth, url_prefix='/auth')  # Add url_prefix for auth blueprint
         app.register_blueprint(admin)
-        app.register_blueprint(manager)  # Make sure this line is here
+        app.register_blueprint(manager)
         app.register_blueprint(user)
 
     # Add db_session to app.extensions
