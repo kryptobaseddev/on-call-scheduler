@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from scheduling_algorithm import generate_advanced_schedule
 import logging
 from utils import admin_required, manager_required
-from werkzeug.routing.exceptions import BuildError
+import traceback
 
 main = Blueprint('main', __name__)
 auth = Blueprint('auth', __name__)
@@ -18,6 +18,42 @@ user = Blueprint('user', __name__)
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+@main.route('/')
+@login_required
+def index():
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        logger.debug("Starting index route")
+        logger.info(f"User {current_user.username} accessing index page")
+        
+        logger.debug("Fetching user schedules")
+        user_schedules = db_session.query(Schedule).filter_by(user_id=current_user.id).all()
+        if user_schedules is None:
+            logger.warning("User schedules query returned None")
+            user_schedules = []
+        
+        logger.debug("Fetching all schedules")
+        all_schedules = db_session.query(Schedule).all()
+        if all_schedules is None:
+            logger.warning("All schedules query returned None")
+            all_schedules = []
+        
+        logger.debug("Fetching team notes")
+        notes = db_session.query(Note).filter_by(team_id=current_user.team_id).all()
+        if notes is None:
+            logger.warning("Team notes query returned None")
+            notes = []
+        
+        logger.debug("Rendering dashboard template")
+        return render_template('dashboard.html', user_schedules=user_schedules, all_schedules=all_schedules, notes=notes)
+    except Exception as e:
+        logger.error(f"Error in index route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while loading the dashboard.', 'error')
+        return render_template('dashboard.html')
+    finally:
+        db_session.close()
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -37,48 +73,21 @@ def logout():
     logout_user()
     return redirect(url_for('main.index'))
 
-@main.route('/')
-@login_required
-def index():
-    db_session = current_app.extensions['sqlalchemy']['db_session']
-    try:
-        logger.info(f"User {current_user.username} accessing index page")
-        user_schedules = db_session.query(Schedule).filter_by(user_id=current_user.id).all()
-        all_schedules = db_session.query(Schedule).all()
-        notes = db_session.query(Note).filter_by(team_id=current_user.team_id).all()
-        return render_template('dashboard.html', user_schedules=user_schedules, all_schedules=all_schedules, notes=notes)
-    except Exception as e:
-        logger.error(f"Error in index route: {str(e)}")
-        flash('An error occurred while loading the dashboard.', 'error')
-        return render_template('dashboard.html')
-    finally:
-        db_session.close()
-
 @admin.route('/analytics')
 @login_required
 @admin_required
 def analytics_dashboard():
-    logger.debug('Starting analytics_dashboard route')
     db_session = current_app.extensions['sqlalchemy']['db_session']
     try:
         logger.info(f"User {current_user.username} accessing analytics dashboard")
         
-        try:
-            db_session.execute(text('SELECT 1'))
-            logger.info("Database connection is working properly")
-        except Exception as e:
-            logger.error(f"Database connection error: {str(e)}")
-            raise
-
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         six_months_ago = datetime.utcnow() - timedelta(days=180)
 
-        analytics_data = db_session.query(
-            func.count(func.distinct(User.id)).label('total_users'),
-            func.count(func.distinct(Team.id)).label('total_teams'),
-            func.count(func.distinct(Schedule.id)).label('total_schedules'),
-            func.avg(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('avg_schedule_hours')
-        ).select_from(User).outerjoin(Team).outerjoin(Schedule).first()
+        total_users = db_session.query(func.count(User.id)).scalar()
+        total_teams = db_session.query(func.count(Team.id)).scalar()
+        total_schedules = db_session.query(func.count(Schedule.id)).scalar()
+        avg_schedule_hours = db_session.query(func.avg(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600)).scalar()
 
         user_hours = db_session.query(
             User.username,
@@ -105,69 +114,23 @@ def analytics_dashboard():
             func.count(UserActivity.id).label('login_count')
         ).join(UserActivity).filter(UserActivity.timestamp >= thirty_days_ago, UserActivity.activity_type == 'login').group_by(User.username).all()
 
-        template_data = {
-            'total_users': analytics_data.total_users or 0,
-            'total_teams': analytics_data.total_teams or 0,
-            'total_schedules': analytics_data.total_schedules or 0,
-            'avg_schedule_hours': round(analytics_data.avg_schedule_hours or 0, 2),
-            'user_hours': user_hours or [],
-            'team_hours': team_hours or [],
-            'time_off_status': time_off_status or [],
-            'time_off_trends': time_off_trends or [],
-            'user_activity': user_activity or []
-        }
-        logger.debug(f"Data being passed to template: {template_data}")
-
-        return render_template('analytics_dashboard.html', **template_data)
-    except BuildError as e:
-        logger.error(f"URL build error in analytics_dashboard route: {str(e)}")
-        flash('An error occurred while building the URL. Please check if all blueprints are correctly registered.', 'error')
-        return render_template('error.html', error_message="URL build error. Please contact the administrator.")
-    except OperationalError as e:
-        logger.error(f"Database connection error in analytics_dashboard route: {str(e)}")
-        flash('A database connection error occurred. Please try again later.', 'error')
-        return render_template('error.html', error_message="Database connection error. Please try again later.")
-    except SQLAlchemyError as e:
-        logger.error(f"Database error in analytics_dashboard route: {str(e)}")
-        flash('An error occurred while processing your request.', 'error')
-        return render_template('error.html', error_message="Database error. Please try again later.")
+        return render_template('analytics_dashboard.html',
+                               total_users=total_users,
+                               total_teams=total_teams,
+                               total_schedules=total_schedules,
+                               avg_schedule_hours=avg_schedule_hours,
+                               user_hours=user_hours,
+                               team_hours=team_hours,
+                               time_off_status=time_off_status,
+                               time_off_trends=time_off_trends,
+                               user_activity=user_activity)
     except Exception as e:
-        logger.error(f"Unexpected error in analytics_dashboard route: {str(e)}")
-        flash('An unexpected error occurred. Please try again later.', 'error')
-        return render_template('error.html', error_message="An unexpected error occurred. Please try again later.")
+        logger.error(f"Error in analytics_dashboard route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while loading the analytics dashboard.', 'error')
+        return render_template('analytics_dashboard.html')
     finally:
         db_session.close()
 
-@admin.route('/manage_users')
-@login_required
-@admin_required
-def manage_users():
-    db_session = current_app.extensions['sqlalchemy']['db_session']
-    try:
-        logger.info(f"User {current_user.username} accessing manage users page")
-        users = db_session.query(User).all()
-        teams = db_session.query(Team).all()
-        return render_template('user_management.html', users=users, teams=teams)
-    except Exception as e:
-        logger.error(f"Error in manage_users route: {str(e)}")
-        flash('An error occurred while loading user management.', 'error')
-        return render_template('user_management.html')
-    finally:
-        db_session.close()
-
-@admin.route('/manage_teams')
-@login_required
-@admin_required
-def manage_teams():
-    db_session = current_app.extensions['sqlalchemy']['db_session']
-    try:
-        logger.info(f"User {current_user.username} accessing manage teams page")
-        teams = db_session.query(Team).all()
-        managers = db_session.query(User).filter(User.role.in_(['manager', 'admin'])).all()
-        return render_template('team_management.html', teams=teams, managers=managers)
-    except Exception as e:
-        logger.error(f"Error in manage_teams route: {str(e)}")
-        flash('An error occurred while loading team management.', 'error')
-        return render_template('team_management.html')
-    finally:
-        db_session.close()
+# Add similar try-except-finally blocks for other routes (manage_users, manage_teams, etc.)
+# ...

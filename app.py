@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from urllib.parse import urlparse
+import logging
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -20,6 +21,10 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'fallback-jwt-secret-key')
     app.config['JWT_TOKEN_LOCATION'] = ['headers']
+
+    # Configure logging
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
 
     # Parse the DATABASE_URL
     url = urlparse(app.config['SQLALCHEMY_DATABASE_URI'])
@@ -40,7 +45,7 @@ def create_app():
     jwt.init_app(app)
 
     login_manager = LoginManager()
-    login_manager.login_view = 'auth.login'  # Make sure this matches the endpoint name
+    login_manager.login_view = 'auth.login'
     login_manager.init_app(app)
 
     from models import User
@@ -53,7 +58,7 @@ def create_app():
         from models import User, Team, Schedule, TimeOffRequest, Note
         from routes import main, auth, admin, manager, user
         app.register_blueprint(main)
-        app.register_blueprint(auth, url_prefix='/auth')  # Add url_prefix for auth blueprint
+        app.register_blueprint(auth, url_prefix='/auth')
         app.register_blueprint(admin)
         app.register_blueprint(manager)
         app.register_blueprint(user)
@@ -62,5 +67,11 @@ def create_app():
     app.extensions['sqlalchemy'] = {
         'db_session': db_session
     }
+
+    # Global error handler
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        logger.exception("Unhandled exception: %s", str(e))
+        return render_template('500.html'), 500
 
     return app
