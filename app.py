@@ -59,9 +59,9 @@ def create_app():
         from routes import main, auth, admin, manager, user
         app.register_blueprint(main)
         app.register_blueprint(auth, url_prefix='/auth')
-        app.register_blueprint(admin)
-        app.register_blueprint(manager)
-        app.register_blueprint(user)
+        app.register_blueprint(admin, url_prefix='/admin')
+        app.register_blueprint(manager, url_prefix='/manager')
+        app.register_blueprint(user, url_prefix='/user')
 
     # Add db_session to app.extensions
     app.extensions['sqlalchemy'] = {

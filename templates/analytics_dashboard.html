@@ -4,6 +4,25 @@
 <div class="container mt-4">
     <h1 class="mb-4">Analytics Dashboard</h1>
 
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Date Range Selection</h5>
+            <form action="{{ url_for('admin.analytics_dashboard') }}" method="POST" class="row g-3">
+                <div class="col-auto">
+                    <label for="start_date" class="visually-hidden">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <div class="col-auto">
+                    <label for="end_date" class="visually-hidden">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Update Dashboard</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-md-3 mb-4">
             <div class="card">
@@ -43,7 +62,7 @@
         <div class="col-md-6 mb-4">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">On-Call Hours per User (Last 30 Days)</h5>
+                    <h5 class="card-title">On-Call Hours per User</h5>
                     <canvas id="userHoursChart"></canvas>
                 </div>
             </div>
@@ -51,7 +70,7 @@
         <div class="col-md-6 mb-4">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">On-Call Hours per Team (Last 30 Days)</h5>
+                    <h5 class="card-title">On-Call Hours per Team</h5>
                     <canvas id="teamHoursChart"></canvas>
                 </div>
             </div>
@@ -70,7 +89,7 @@
         <div class="col-md-6 mb-4">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Time Off Request Trends (Last 6 Months)</h5>
+                    <h5 class="card-title">Time Off Request Trends</h5>
                     <canvas id="timeOffTrendsChart"></canvas>
                 </div>
             </div>
@@ -81,7 +100,7 @@
         <div class="col-md-12 mb-4">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">User Activity (Logins in Last 30 Days)</h5>
+                    <h5 class="card-title">User Activity (Logins)</h5>
                     <canvas id="userActivityChart"></canvas>
                 </div>
             </div>

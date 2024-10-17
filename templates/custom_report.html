@@ -25,6 +25,7 @@
                     <input type="date" class="form-control" id="end_date" name="end_date" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Generate Report</button>
+                <button type="submit" class="btn btn-secondary" name="export" value="csv">Export to CSV</button>
             </form>
         </div>
     </div>
@@ -37,6 +38,7 @@
             <p>Date Range: {{ start_date.strftime('%Y-%m-%d') }} to {{ end_date.strftime('%Y-%m-%d') }}</p>
             
             {% if report_type == 'user_hours' or report_type == 'team_hours' %}
+            <canvas id="reportChart"></canvas>
             <table class="table">
                 <thead>
                     <tr>
@@ -79,4 +81,37 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    {% if report_data and (report_type == 'user_hours' or report_type == 'team_hours') %}
+    var ctx = document.getElementById('reportChart').getContext('2d');
+    var reportChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for item in report_data %}'{{ item[0] }}',{% endfor %}],
+            datasets: [{
+                label: 'Total Hours',
+                data: [{% for item in report_data %}{{ item[1] }},{% endfor %}],
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Hours'
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
 {% endblock %}
