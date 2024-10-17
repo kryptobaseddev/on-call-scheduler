@@ -154,3 +154,20 @@ def manage_users():
         return render_template('user_management.html')
     finally:
         db_session.close()
+
+@admin.route('/manage_teams')
+@login_required
+@admin_required
+def manage_teams():
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        logger.info(f"User {current_user.username} accessing manage teams page")
+        teams = db_session.query(Team).all()
+        managers = db_session.query(User).filter(User.role.in_(['manager', 'admin'])).all()
+        return render_template('team_management.html', teams=teams, managers=managers)
+    except Exception as e:
+        logger.error(f"Error in manage_teams route: {str(e)}")
+        flash('An error occurred while loading team management.', 'error')
+        return render_template('team_management.html')
+    finally:
+        db_session.close()
