@@ -1,103 +1,138 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Team Management</h1>
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Add New Team</h5>
-            <form action="{{ url_for('admin.manage_teams') }}" method="POST">
-                <div class="mb-3">
-                    <label for="name" class="form-label">Team Name</label>
-                    <input type="text" class="form-control" id="name" name="name" required>
-                </div>
-                <div class="mb-3">
-                    <label for="manager_id" class="form-label">Manager</label>
-                    <select class="form-select" id="manager_id" name="manager_id">
-                        <option value="">No Manager</option>
-                        {% for manager in managers %}
-                            <option value="{{ manager.id }}">{{ manager.username }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="color" class="form-label">Team Color</label>
-                    <input type="color" class="form-control form-control-color" id="color" name="color" value="#000000" title="Choose team color">
-                </div>
-                <button type="submit" class="btn btn-primary">Add Team</button>
-            </form>
+  <h1 class="mb-4">Team Management</h1>
+  
+  <!-- Add New Team Form -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Add New Team</h5>
+      <form action="{{ url_for('admin.manage_teams') }}" method="POST">
+        <div class="mb-3">
+          <label for="name" class="form-label">Team Name</label>
+          <input
+            type="text"
+            class="form-control"
+            id="name"
+            name="name"
+            required
+          />
         </div>
+        <div class="mb-3">
+          <label for="manager_id" class="form-label">Manager</label>
+          <select class="form-select" id="manager_id" name="manager_id">
+            <option value="">No Manager</option>
+            {% for manager in managers %}
+            <option value="{{ manager.id }}">{{ manager.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="color" class="form-label">Team Color</label>
+          <div id="colorPalette" class="d-flex flex-wrap">
+            {% for color in available_colors %}
+            <div
+              class="color-option m-1"
+              style="background-color: {{ color }};"
+              data-color="{{ color }}"
+            ></div>
+            {% endfor %}
+          </div>
+          <input type="hidden" id="color" name="color" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Add Team</button>
+      </form>
     </div>
+  </div>
 
+    <!-- Display Existing Teams -->
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Existing Teams</h5>
-            <div class="mb-3">
-                <input type="text" class="form-control" id="teamSearch" placeholder="Search teams...">
-            </div>
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Team Name</th>
+                        <th>Name</th>
                         <th>Manager</th>
-                        <th>Members</th>
                         <th>Color</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="teamTableBody">
                     {% for team in teams %}
-                        <tr>
-                            <td>{{ team.name }}</td>
-                            <td>{{ team.manager.username if team.manager else 'No Manager' }}</td>
-                            <td>{{ team.users|length }}</td>
-                            <td><span class="color-preview" style="background-color: {{ team.color }};"></span></td>
-                            <td>
-                                <a href="{{ url_for('admin.edit_team', team_id=team.id) }}" class="btn btn-sm btn-primary">Edit</a>
-                            </td>
-                        </tr>
+                    <tr>
+                        <td>{{ team.name }}</td>
+                        <td>{{ team.manager.username if team.manager else 'No Manager' }}</td>
+                        <td>
+                            <span class="color-preview" style="background-color: {{ team.color }};"></span>
+                            {{ team.color }}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin.edit_team', team_id=team.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-
-    <!-- Debug output -->
-    <div class="card mt-4">
-        <div class="card-body">
-            <h5 class="card-title">Debug Information</h5>
-            <h6>Teams ({{ teams|length }}):</h6>
-            <pre>{{ teams|pprint }}</pre>
-            <h6>Managers ({{ managers|length }}):</h6>
-            <pre>{{ managers|pprint }}</pre>
-        </div>
-    </div>
 </div>
 
 <style>
-    .color-preview {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 1px solid #ccc;
-    }
+  .color-option {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .color-option.selected {
+    border-color: #000;
+  }
+  .color-option.used {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .color-preview {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+  }
 </style>
 
 <script>
-document.getElementById('teamSearch').addEventListener('input', function(e) {
-    const searchText = e.target.value.toLowerCase();
-    const rows = document.getElementById('teamTableBody').getElementsByTagName('tr');
-    
-    for (let row of rows) {
-        const text = row.textContent.toLowerCase();
-        if (text.includes(searchText)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    }
-});
+  document.addEventListener('DOMContentLoaded', function() {
+      const colorOptions = document.querySelectorAll('.color-option');
+  const colorInput = document.getElementById('color');
+  const usedColors = new Set({{ used_colors|tojson|default('[]') }});
+  colorOptions.forEach(option => {
+  const color = option.dataset.color;
+  if (usedColors.has(color)) {
+  option.classList.add('used');
+  } else {
+  option.addEventListener('click', function() {
+  if (!this.classList.contains('used')) {
+  colorOptions.forEach(opt => opt.classList.remove('selected'));
+  this.classList.add('selected');
+  colorInput.value = color;
+  }
+  });
+  }
+  });
+
+  document.getElementById('teamSearch').addEventListener('input', function(e) {
+      const searchText = e.target.value.toLowerCase();
+      const rows = document.getElementById('teamTableBody').getElementsByTagName('tr');
+
+      for (let row of rows) {
+          const text = row.textContent.toLowerCase();
+          if (text.includes(searchText)) {
+              row.style.display = '';
+          } else {
+              row.style.display = 'none';
+          }
+      }
+  });
 </script>
 {% endblock %}

@@ -22,7 +22,16 @@
                 </div>
                 <div class="mb-3">
                     <label for="color" class="form-label">Team Color</label>
-                    <input type="color" class="form-control form-control-color" id="color" name="color" value="{{ team.color }}" title="Choose team color">
+                    <div id="colorPalette" class="d-flex flex-wrap">
+                        {% for color in available_colors %}
+                        <div
+                            class="color-option m-1 {% if color == team.color %}selected{% endif %}"
+                            style="background-color: {{ color }};"
+                            data-color="{{ color }}"
+                        ></div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" id="color" name="color" value="{{ team.color }}" required />
                 </div>
                 <button type="submit" class="btn btn-primary">Update Team</button>
                 <a href="{{ url_for('admin.manage_teams') }}" class="btn btn-secondary">Cancel</a>
@@ -30,4 +39,44 @@
         </div>
     </div>
 </div>
+
+<style>
+  .color-option {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .color-option.selected {
+    border-color: #000;
+  }
+  .color-option.used {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const colorOptions = document.querySelectorAll('.color-option');
+        const colorInput = document.getElementById('color');
+        const usedColors = new Set({{ used_colors|tojson }});
+    
+        colorOptions.forEach(option => {
+            const color = option.dataset.color;
+            if (usedColors.has(color) && color !== '{{ team.color }}') {
+                option.classList.add('used');
+            } else {
+                option.addEventListener('click', function() {
+                    if (!this.classList.contains('used')) {
+                        colorOptions.forEach(opt => opt.classList.remove('selected'));
+                        this.classList.add('selected');
+                        colorInput.value = color;
+                    }
+                });
+            }
+        });
+    });
+    </script>
 {% endblock %}

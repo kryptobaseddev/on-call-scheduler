@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Support Team On-Call Scheduling</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.css' rel='stylesheet' />
@@ -35,6 +36,9 @@
                         {% if current_user.role in ['admin', 'manager'] %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('manager.manage_schedule') }}">Manage Schedule</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('manager.my_team') }}">My Team</a>
                         </li>
                         {% endif %}
                         <li class="nav-item">

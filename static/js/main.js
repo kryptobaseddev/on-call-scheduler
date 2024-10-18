@@ -6,14 +6,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             
-            fetch('/login', {
+            fetch('/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.status === "success") {
                     window.location.href = data.redirect;

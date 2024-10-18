@@ -4,7 +4,7 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from urllib.parse import urlparse
@@ -89,7 +89,7 @@ def create_app():
     @app.before_request
     def test_database_connection():
         try:
-            db.session.execute('SELECT 1')
+            db.session.execute(text('SELECT 1'))
             logger.debug("Database connection test successful")
         except OperationalError as e:
             logger.error(f"Database connection test failed: {str(e)}")

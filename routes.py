@@ -67,36 +67,39 @@ def index():
     finally:
         db_session.close()
 
+from flask import jsonify
+
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
+    db_session = current_app.extensions['sqlalchemy']['db_session']
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         logger.debug(f"Login attempt for username: {username}")
-        
+
         try:
-            user = User.query.filter_by(username=username).first()
-            if user:
-                logger.debug(f"User found: {user.username}")
-                if check_password_hash(user.password_hash, password):
-                    logger.info(f"Successful login for user: {user.username}")
-                    login_user(user)
-                    return redirect(url_for('main.index'))
-                else:
-                    logger.warning(f"Failed login attempt for user: {user.username} - Invalid password")
+            user = db_session.query(User).filter_by(username=username).first()
+            if user and check_password_hash(user.password_hash, password):
+                logger.info(f"Successful login for user: {user.username}")
+                login_user(user)
+                logger.debug(f"Redirecting user {user.username} to the index page")
+                return jsonify({"status": "success", "redirect": url_for('main.index')})
             else:
-                logger.warning(f"Failed login attempt - User not found: {username}")
-            
-            flash('Invalid username or password')
+                logger.warning(f"Failed login attempt for user: {username}")
+                return jsonify({"status": "error", "message": "Invalid username or password"})
+
         except SQLAlchemyError as e:
             logger.error(f"Database error during login: {str(e)}")
             logger.error(traceback.format_exc())
-            flash('A database error occurred. Please try again later.', 'error')
+            return jsonify({"status": "error", "message": "A database error occurred. Please try again later."})
         except Exception as e:
             logger.error(f"Unexpected error during login: {str(e)}")
             logger.error(traceback.format_exc())
-            flash('An unexpected error occurred. Please try again later.', 'error')
+            return jsonify({"status": "error", "message": "An unexpected error occurred. Please try again later."})
+        finally:
+            db_session.close()
     
+    logger.debug("Rendering login page")
     return render_template('login.html')
 
 @auth.route('/logout')
@@ -151,7 +154,10 @@ def analytics_dashboard():
         team_hours = db_session.query(
             Team.name,
             func.sum(func.extract('epoch', Schedule.end_time - Schedule.start_time) / 3600).label('total_hours')
-        ).join(User).join(Schedule).filter(Schedule.start_time >= start_date, Schedule.end_time <= end_date).group_by(Team.name).all()
+        ).join(User, User.team_id == Team.id).join(Schedule, Schedule.user_id == User.id).filter(
+            Schedule.start_time >= start_date, 
+            Schedule.end_time <= end_date
+        ).group_by(Team.name).all()
         logger.debug(f"Team hours: {team_hours}")
 
         logger.debug("Fetching time off status")
@@ -191,43 +197,192 @@ def analytics_dashboard():
         logger.error(f"Error in analytics_dashboard route: {str(e)}")
         logger.error(traceback.format_exc())
         flash('An error occurred while loading the analytics dashboard.', 'error')
-        return render_template('analytics_dashboard.html')
+        return render_template('analytics_dashboard.html', start_date=datetime.utcnow() - timedelta(days=30), end_date=datetime.utcnow())
     finally:
         db_session.close()
 
-@admin.route('/manage_users')
+@admin.route('/manage_users', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def manage_users():
     db_session = current_app.extensions['sqlalchemy']['db_session']
     try:
         logger.info(f"User {current_user.username} accessing manage users page")
+        
+        if request.method == 'POST':
+            # Handle user creation here
+            username = request.form.get('username')
+            email = request.form.get('email')
+            mobile_phone = request.form.get('mobile_phone')
+            role = request.form.get('role')
+            team_id = request.form.get('team_id')
+            password = request.form.get('password')
+
+            if not username or not email or not role or not team_id or not password or not mobile_phone:
+                flash('All fields are required.', 'error')
+                return redirect(url_for('admin.manage_users'))
+            
+            new_user = User(username=username, email=email, role=role, team_id=team_id, password_hash=generate_password_hash(password), mobile_phone=mobile_phone)
+            db_session.add(new_user)
+            db_session.commit()
+            flash('User created successfully.', 'success')
+            return redirect(url_for('admin.manage_users'))
+        
         users = db_session.query(User).all()
         teams = db_session.query(Team).all()
+        
+        logger.debug(f"Fetched {len(users)} users and {len(teams)} teams")
+        
         return render_template('user_management.html', users=users, teams=teams)
     except Exception as e:
         logger.error(f"Error in manage_users route: {str(e)}")
         logger.error(traceback.format_exc())
         flash('An error occurred while loading user management.', 'error')
-        return render_template('user_management.html')
+        return render_template('user_management.html', users=[], teams=[])
     finally:
         db_session.close()
 
-@admin.route('/manage_teams')
+@admin.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_user(user_id):
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        user = db_session.query(User).get(user_id)
+        if not user:
+            flash('User not found.', 'error')
+            return redirect(url_for('admin.manage_users'))
+
+        if request.method == 'POST':
+            user.username = request.form.get('username')
+            user.email = request.form.get('email')
+            user.role = request.form.get('role')
+            user.team_id = request.form.get('team_id') or None
+            user.mobile_phone = request.form.get('mobile_phone')
+            if request.form.get('password'):
+                user.password_hash = generate_password_hash(request.form.get('password'))
+            
+            db_session.commit()
+            flash('User updated successfully.', 'success')
+            return redirect(url_for('admin.manage_users'))
+
+        teams = db_session.query(Team).all()
+        return render_template('edit_user.html', user=user, teams=teams)
+    except Exception as e:
+        logger.error(f"Error in edit_user route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while editing the user.', 'error')
+        return redirect(url_for('admin.manage_users'))
+    finally:
+        db_session.close()
+
+@admin.route('/manage_teams', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def manage_teams():
     db_session = current_app.extensions['sqlalchemy']['db_session']
     try:
-        logger.info(f"User {current_user.username} accessing manage teams page")
+        # Define the palette of 30 distinct colors
+        color_palette = [
+            "#FF0000","#0000FF","#FFFF00","#00FF00","#FFA500","#800080",
+            "#00FFFF","#FF00FF","#BFFF00","#008080","#EE82EE","#FFBF00",
+            "#FFC0CB","#A52A2A","#87CEEB","#006400","#FFD700","#DC143C",
+            "#E6E6FA","#40E0D0","#808000","#4B0082","#FF7F50","#800000",
+            "#6A5ACD","#2E8B57","#FF69B4","#FF8C00","#7FFF00","#4682B4"
+        ]
+
+        if request.method == 'POST':
+            # Handle team creation here
+            name = request.form.get('name')
+            manager_id = request.form.get('manager_id')
+            color = request.form.get('color')
+
+            if not name:
+                flash('Team name is required.', 'error')
+                return redirect(url_for('admin.manage_teams'))
+            
+            new_team = Team(name=name, manager_id=manager_id, color=color)
+            db_session.add(new_team)
+            db_session.commit()
+            flash('Team created successfully.', 'success')
+            return redirect(url_for('admin.manage_teams'))
+        
         teams = db_session.query(Team).all()
         managers = db_session.query(User).filter(User.role.in_(['manager', 'admin'])).all()
-        return render_template('team_management.html', teams=teams, managers=managers)
+        
+        # Get the colors that are already in use
+        used_colors = [team.color for team in teams if team.color]
+        
+        # Filter out the used colors from the palette
+        available_colors = [color for color in color_palette if color not in used_colors]
+
+        logger.debug(f"Fetched {len(teams)} teams and {len(managers)} managers")
+        
+        return render_template('team_management.html', 
+                               teams=teams, 
+                               managers=managers, 
+                               available_colors=available_colors,
+                               used_colors=used_colors)
     except Exception as e:
         logger.error(f"Error in manage_teams route: {str(e)}")
         logger.error(traceback.format_exc())
         flash('An error occurred while loading team management.', 'error')
-        return render_template('team_management.html')
+        return render_template('team_management.html', 
+                               teams=[], 
+                               managers=[], 
+                               available_colors=color_palette,
+                               used_colors=[])
+    finally:
+        db_session.close()
+
+@admin.route('/edit_team/<int:team_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_team(team_id):
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        team = db_session.query(Team).get(team_id)
+        if not team:
+            flash('Team not found.', 'error')
+            return redirect(url_for('admin.manage_teams'))
+
+        # Define the palette of 30 distinct colors (same as in manage_teams)
+        color_palette = [
+            "#FF0000","#0000FF","#FFFF00","#00FF00","#FFA500","#800080",
+            "#00FFFF","#FF00FF","#BFFF00","#008080","#EE82EE","#FFBF00",
+            "#FFC0CB","#A52A2A","#87CEEB","#006400","#FFD700","#DC143C",
+            "#E6E6FA","#40E0D0","#808000","#4B0082","#FF7F50","#800000",
+            "#6A5ACD","#2E8B57","#FF69B4","#FF8C00","#7FFF00","#4682B4"
+        ]
+
+        if request.method == 'POST':
+            team.name = request.form.get('name')
+            team.manager_id = request.form.get('manager_id') or None
+            team.color = request.form.get('color')
+            
+            db_session.commit()
+            flash('Team updated successfully.', 'success')
+            return redirect(url_for('admin.manage_teams'))
+
+        managers = db_session.query(User).filter(User.role.in_(['manager', 'admin'])).all()
+        
+        # Get the colors that are already in use by other teams
+        used_colors = db_session.query(Team.color).filter(Team.id != team_id, Team.color != None).all()
+        used_colors = [color[0] for color in used_colors]
+        
+        # Filter out the used colors from the palette
+        available_colors = [color for color in color_palette if color not in used_colors or color == team.color]
+
+        return render_template('edit_team.html', 
+                               team=team, 
+                               managers=managers, 
+                               available_colors=available_colors,
+                               used_colors=used_colors)
+    except Exception as e:
+        logger.error(f"Error in edit_team route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while editing the team.', 'error')
+        return redirect(url_for('admin.manage_teams'))
     finally:
         db_session.close()
 
@@ -250,7 +405,7 @@ def manage_schedule():
             return redirect(url_for('manager.manage_schedule'))
         
         users = db_session.query(User).all()
-        schedules = db_session.query(Schedule).all()
+        schedules = db_session.query(Schedule).order_by(Schedule.start_time.desc()).all()
         return render_template('schedule.html', users=users, schedules=schedules)
     except Exception as e:
         logger.error(f"Error in manage_schedule route: {str(e)}")
@@ -259,6 +414,24 @@ def manage_schedule():
         return render_template('schedule.html')
     finally:
         db_session.close()
+        
+@manager.route('/advanced_schedule', methods=['GET', 'POST'])
+@login_required
+@manager_required
+def advanced_schedule():
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        logger.info(f"User {current_user.username} accessing advanced schedule page")
+        # Add any data processing or logic needed for advanced scheduling here
+        return render_template('advanced_schedule.html')
+    except Exception as e:
+        logger.error(f"Error in advanced_schedule route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while loading the advanced scheduling page.', 'error')
+        return render_template('advanced_schedule.html')
+    finally:
+        db_session.close()
+
 
 @user.route('/time_off_request', methods=['GET', 'POST'])
 @login_required
@@ -349,3 +522,119 @@ def export_to_csv(report_type, report_data):
         as_attachment=True,
         attachment_filename=f'{report_type}_report.csv'
     )
+
+@manager.route('/edit_schedule/<int:schedule_id>', methods=['GET', 'POST'])
+@login_required
+@manager_required
+def edit_schedule(schedule_id):
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        schedule = db_session.query(Schedule).get(schedule_id)
+        if not schedule:
+            flash('Schedule not found.', 'error')
+            return redirect(url_for('manager.manage_schedule'))
+
+        if request.method == 'POST':
+            schedule.user_id = request.form.get('user_id')
+            schedule.start_time = datetime.strptime(request.form.get('start_time'), '%Y-%m-%dT%H:%M')
+            schedule.end_time = datetime.strptime(request.form.get('end_time'), '%Y-%m-%dT%H:%M')
+            
+            db_session.commit()
+            flash('Schedule updated successfully.', 'success')
+            return redirect(url_for('manager.manage_schedule'))
+
+        users = db_session.query(User).all()
+        return render_template('edit_schedule.html', schedule=schedule, users=users)
+    except Exception as e:
+        logger.error(f"Error in edit_schedule route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while editing the schedule.', 'error')
+        return redirect(url_for('manager.manage_schedule'))
+    finally:
+        db_session.close()
+
+@manager.route('/delete_schedule/<int:schedule_id>', methods=['GET'])
+@login_required
+@manager_required
+def delete_schedule(schedule_id):
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        schedule = db_session.query(Schedule).get(schedule_id)
+        if schedule:
+            db_session.delete(schedule)
+            db_session.commit()
+            flash('Schedule deleted successfully.', 'success')
+        else:
+            flash('Schedule not found.', 'error')
+        return redirect(url_for('manager.manage_schedule'))
+    except Exception as e:
+        logger.error(f"Error in delete_schedule route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while deleting the schedule.', 'error')
+        return redirect(url_for('manager.manage_schedule'))
+    finally:
+        db_session.close()
+
+@manager.route('/batch_delete_schedules', methods=['POST'])
+@login_required
+@manager_required
+def batch_delete_schedules():
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        schedule_ids = request.form.getlist('schedule_ids[]')
+        if schedule_ids:
+            db_session.query(Schedule).filter(Schedule.id.in_(schedule_ids)).delete(synchronize_session=False)
+            db_session.commit()
+            flash(f'{len(schedule_ids)} schedules deleted successfully.', 'success')
+        else:
+            flash('No schedules selected for deletion.', 'warning')
+        return redirect(url_for('manager.manage_schedule'))
+    except Exception as e:
+        logger.error(f"Error in batch_delete_schedules route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while deleting the schedules.', 'error')
+        return redirect(url_for('manager.manage_schedule'))
+    finally:
+        db_session.close()
+
+@manager.route('/my_team', methods=['GET', 'POST'])
+@login_required
+@manager_required
+def my_team():
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        team = current_user.managed_team
+        if not team:
+            flash('You are not assigned to manage any team.', 'warning')
+            return redirect(url_for('main.index'))
+
+        if request.method == 'POST':
+            # Handle form submissions for call sequence and team notes
+            if 'update_sequence' in request.form:
+                new_sequence = request.form.getlist('user_sequence')
+                for index, user_id in enumerate(new_sequence):
+                    user = db_session.query(User).get(user_id)
+                    if user and user.team_id == team.id:
+                        user.call_sequence = index + 1
+                db_session.commit()
+                flash('Call sequence updated successfully.', 'success')
+            
+            elif 'add_note' in request.form:
+                note_content = request.form.get('note_content')
+                if note_content:
+                    new_note = Note(content=note_content, created_at=datetime.utcnow(), team_id=team.id)
+                    db_session.add(new_note)
+                    db_session.commit()
+                    flash('Team note added successfully.', 'success')
+
+        team_members = db_session.query(User).filter_by(team_id=team.id).order_by(User.call_sequence).all()
+        team_notes = db_session.query(Note).filter_by(team_id=team.id).order_by(Note.created_at.desc()).all()
+
+        return render_template('my_team.html', team=team, team_members=team_members, team_notes=team_notes)
+    except Exception as e:
+        logger.error(f"Error in my_team route: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred while loading the team management page.', 'error')
+        return redirect(url_for('main.index'))
+    finally:
+        db_session.close()

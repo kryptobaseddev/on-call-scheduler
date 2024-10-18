@@ -32,25 +32,78 @@
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Existing Schedules</h5>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for schedule in schedules %}
+            <div class="mb-3">
+                <input type="text" class="form-control" id="scheduleSearch" placeholder="Search schedules...">
+            </div>
+            <form id="batchDeleteForm" action="{{ url_for('manager.batch_delete_schedules') }}" method="POST">
+                <table class="table">
+                    <thead>
                         <tr>
-                            <td>{{ schedule.user.username }}</td>
-                            <td>{{ schedule.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>{{ schedule.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <th><input type="checkbox" id="selectAll"></th>
+                            <th>User</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Team</th>
+                            <th>Actions</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody id="scheduleTableBody">
+                        {% for schedule in schedules %}
+                            <tr>
+                                <td><input type="checkbox" name="schedule_ids[]" value="{{ schedule.id }}"></td>
+                                <td>{{ schedule.user.username }}</td>
+                                <td>{{ schedule.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ schedule.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ schedule.user.team.name }}</td>
+                                <td>
+                                    <a href="{{ url_for('manager.edit_schedule', schedule_id=schedule.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                                    <a href="{{ url_for('manager.delete_schedule', schedule_id=schedule.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this schedule?')">Delete</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-danger" id="batchDeleteBtn" disabled>Delete Selected</button>
+            </form>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scheduleSearch = document.getElementById('scheduleSearch');
+    const scheduleTableBody = document.getElementById('scheduleTableBody');
+    const selectAll = document.getElementById('selectAll');
+    const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+    const checkboxes = document.querySelectorAll('input[name="schedule_ids[]"]');
+
+    scheduleSearch.addEventListener('input', function(e) {
+        const searchText = e.target.value.toLowerCase();
+        const rows = scheduleTableBody.getElementsByTagName('tr');
+        
+        for (let row of rows) {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchText)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    });
+
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(checkbox => checkbox.checked = this.checked);
+        updateBatchDeleteButton();
+    });
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBatchDeleteButton);
+    });
+
+    function updateBatchDeleteButton() {
+        const checkedBoxes = document.querySelectorAll('input[name="schedule_ids[]"]:checked');
+        batchDeleteBtn.disabled = checkedBoxes.length === 0;
+    }
+});
+</script>
 {% endblock %}

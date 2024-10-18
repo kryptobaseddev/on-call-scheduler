@@ -21,6 +21,10 @@
                     <input type="password" class="form-control" id="password" name="password" required>
                 </div>
                 <div class="mb-3">
+                    <label for="mobile_phone" class="form-label">Mobile Phone</label>
+                    <input type="tel" class="form-control" id="mobile_phone" name="mobile_phone">
+                </div>
+                <div class="mb-3">
                     <label for="role" class="form-label">Role</label>
                     <select class="form-select" id="role" name="role" required>
                         <option value="user">User</option>
@@ -53,6 +57,7 @@
                     <tr>
                         <th>Username</th>
                         <th>Email</th>
+                        <th>Mobile Phone</th>
                         <th>Role</th>
                         <th>Team</th>
                         <th>Actions</th>
@@ -63,6 +68,7 @@
                         <tr>
                             <td>{{ user.username }}</td>
                             <td>{{ user.email }}</td>
+                            <td>{{ user.mobile_phone or 'N/A' }}</td>
                             <td>{{ user.role }}</td>
                             <td>{{ user.team.name if user.team else 'No Team' }}</td>
                             <td>
@@ -72,17 +78,6 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <!-- Debug output -->
-    <div class="card mt-4">
-        <div class="card-body">
-            <h5 class="card-title">Debug Information</h5>
-            <h6>Users ({{ users|length }}):</h6>
-            <pre>{{ users|pprint }}</pre>
-            <h6>Teams ({{ teams|length }}):</h6>
-            <pre>{{ teams|pprint }}</pre>
         </div>
     </div>
 </div>
