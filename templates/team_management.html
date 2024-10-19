@@ -22,7 +22,7 @@
           <select class="form-select" id="manager_id" name="manager_id">
             <option value="">No Manager</option>
             {% for manager in managers %}
-            <option value="{{ manager.id }}">{{ manager.username }}</option>
+              <option value="{{ manager.id }}">{{ manager.username }}</option>
             {% endfor %}
           </select>
         </div>
@@ -51,7 +51,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th>Team Name</th>
                         <th>Manager</th>
                         <th>Color</th>
                         <th>Actions</th>
@@ -61,7 +61,9 @@
                     {% for team in teams %}
                     <tr>
                         <td>{{ team.name }}</td>
-                        <td>{{ team.manager.username if team.manager else 'No Manager' }}</td>
+                        <td>
+                            {{ team.manager.username if team.manager else 'No Manager' }}
+                        </td>
                         <td>
                             <span class="color-preview" style="background-color: {{ team.color }};"></span>
                             {{ team.color }}

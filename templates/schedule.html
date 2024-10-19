@@ -57,7 +57,7 @@
                                 <td>{{ schedule.user.team.name }}</td>
                                 <td>
                                     <a href="{{ url_for('manager.edit_schedule', schedule_id=schedule.id) }}" class="btn btn-sm btn-primary">Edit</a>
-                                    <a href="{{ url_for('manager.delete_schedule', schedule_id=schedule.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this schedule?')">Delete</a>
+                                    <a href="#" class="btn btn-sm btn-danger delete-schedule" data-schedule-id="{{ schedule.id }}">Delete</a>
                                 </td>
                             </tr>
                         {% endfor %}

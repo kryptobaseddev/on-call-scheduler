@@ -3,6 +3,12 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
+# New association table for team managers
+team_managers = db.Table('team_managers',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('team_id', db.Integer, db.ForeignKey('team.id'), primary_key=True)
+)
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
@@ -12,7 +18,7 @@ class User(UserMixin, db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
     mobile_phone = db.Column(db.String(20))
     call_sequence = db.Column(db.Integer, default=0)
-    
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     
@@ -22,10 +28,11 @@ class User(UserMixin, db.Model):
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
-    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     color = db.Column(db.String(7), default="#000000")
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
     users = db.relationship('User', backref='team', lazy='dynamic', foreign_keys=[User.team_id])
-    manager = db.relationship('User', backref=db.backref('managed_team', uselist=False), lazy='joined', foreign_keys=[manager_id])
+    manager = db.relationship('User', foreign_keys=[manager_id], backref=db.backref('managed_teams', lazy='dynamic'))
     notes = db.relationship('Note', backref='team', lazy='dynamic')
 
 class Schedule(db.Model):
@@ -46,9 +53,10 @@ class TimeOffRequest(db.Model):
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False)
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    editable_by = db.Column(db.String(20), default='both')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+    is_priority = db.Column(db.Boolean, default=False)
+    is_archived = db.Column(db.Boolean, default=False)
 
 class UserActivity(db.Model):
     id = db.Column(db.Integer, primary_key=True)

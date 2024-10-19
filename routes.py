@@ -282,46 +282,30 @@ def edit_user(user_id):
 def manage_teams():
     db_session = current_app.extensions['sqlalchemy']['db_session']
     try:
-        # Define the palette of 30 distinct colors
-        color_palette = [
-            "#FF0000","#0000FF","#FFFF00","#00FF00","#FFA500","#800080",
-            "#00FFFF","#FF00FF","#BFFF00","#008080","#EE82EE","#FFBF00",
-            "#FFC0CB","#A52A2A","#87CEEB","#006400","#FFD700","#DC143C",
-            "#E6E6FA","#40E0D0","#808000","#4B0082","#FF7F50","#800000",
-            "#6A5ACD","#2E8B57","#FF69B4","#FF8C00","#7FFF00","#4682B4"
-        ]
-
         if request.method == 'POST':
-            # Handle team creation here
-            name = request.form.get('name')
+            name = request.form['name']
+            color = request.form['color']
             manager_id = request.form.get('manager_id')
-            color = request.form.get('color')
-
-            if not name:
-                flash('Team name is required.', 'error')
-                return redirect(url_for('admin.manage_teams'))
             
-            new_team = Team(name=name, manager_id=manager_id, color=color)
+            new_team = Team(name=name, color=color)
+            if manager_id:
+                manager = db_session.query(User).get(manager_id)
+                new_team.manager = manager
+            
             db_session.add(new_team)
             db_session.commit()
-            flash('Team created successfully.', 'success')
+            flash('Team added successfully!', 'success')
             return redirect(url_for('admin.manage_teams'))
-        
-        teams = db_session.query(Team).all()
-        managers = db_session.query(User).filter(User.role.in_(['manager', 'admin'])).all()
-        
-        # Get the colors that are already in use
-        used_colors = [team.color for team in teams if team.color]
-        
-        # Filter out the used colors from the palette
-        available_colors = [color for color in color_palette if color not in used_colors]
 
-        logger.debug(f"Fetched {len(teams)} teams and {len(managers)} managers")
-        
+        teams = db_session.query(Team).all()
+        managers = db_session.query(User).filter(User.role.in_(['admin', 'manager'])).all()
+        color_palette = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]
+        used_colors = [team.color for team in teams]
+
         return render_template('team_management.html', 
                                teams=teams, 
                                managers=managers, 
-                               available_colors=available_colors,
+                               available_colors=color_palette,
                                used_colors=used_colors)
     except Exception as e:
         logger.error(f"Error in manage_teams route: {str(e)}")
@@ -341,43 +325,29 @@ def manage_teams():
 def edit_team(team_id):
     db_session = current_app.extensions['sqlalchemy']['db_session']
     try:
-        team = db_session.query(Team).get(team_id)
-        if not team:
+        team = db_session.query(Team).filter_by(id=team_id).first()
+        if team is None:
             flash('Team not found.', 'error')
             return redirect(url_for('admin.manage_teams'))
 
-        # Define the palette of 30 distinct colors (same as in manage_teams)
-        color_palette = [
-            "#FF0000","#0000FF","#FFFF00","#00FF00","#FFA500","#800080",
-            "#00FFFF","#FF00FF","#BFFF00","#008080","#EE82EE","#FFBF00",
-            "#FFC0CB","#A52A2A","#87CEEB","#006400","#FFD700","#DC143C",
-            "#E6E6FA","#40E0D0","#808000","#4B0082","#FF7F50","#800000",
-            "#6A5ACD","#2E8B57","#FF69B4","#FF8C00","#7FFF00","#4682B4"
-        ]
-
         if request.method == 'POST':
-            team.name = request.form.get('name')
-            team.manager_id = request.form.get('manager_id') or None
-            team.color = request.form.get('color')
-            
+            team.name = request.form['name']
+            team.color = request.form['color']
+            manager_id = request.form.get('manager_id')
+            if manager_id:
+                manager = db_session.query(User).get(manager_id)
+                team.manager = manager
+            else:
+                team.manager = None
             db_session.commit()
-            flash('Team updated successfully.', 'success')
+            flash('Team updated successfully!', 'success')
             return redirect(url_for('admin.manage_teams'))
 
-        managers = db_session.query(User).filter(User.role.in_(['manager', 'admin'])).all()
-        
-        # Get the colors that are already in use by other teams
-        used_colors = db_session.query(Team.color).filter(Team.id != team_id, Team.color != None).all()
-        used_colors = [color[0] for color in used_colors]
-        
-        # Filter out the used colors from the palette
-        available_colors = [color for color in color_palette if color not in used_colors or color == team.color]
+        managers = db_session.query(User).filter(User.role.in_(['admin', 'manager'])).all()
+        color_palette = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]
+        used_colors = [t.color for t in db_session.query(Team).filter(Team.id != team_id).all()]
 
-        return render_template('edit_team.html', 
-                               team=team, 
-                               managers=managers, 
-                               available_colors=available_colors,
-                               used_colors=used_colors)
+        return render_template('edit_team.html', team=team, managers=managers, available_colors=color_palette, used_colors=used_colors)
     except Exception as e:
         logger.error(f"Error in edit_team route: {str(e)}")
         logger.error(traceback.format_exc())
@@ -603,38 +573,155 @@ def batch_delete_schedules():
 def my_team():
     db_session = current_app.extensions['sqlalchemy']['db_session']
     try:
-        team = current_user.managed_team
-        if not team:
+        managed_teams = current_user.managed_teams
+        if not managed_teams:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"status": "error", "message": "You are not assigned to manage any team."})
             flash('You are not assigned to manage any team.', 'warning')
-            return redirect(url_for('main.index'))
+            return render_template('my_team.html', managed_teams=[], selected_team=None, team_members=[], team_notes=[], archived_notes=[])
+
+        selected_team_id = request.args.get('team_id', type=int) or request.form.get('team_id', type=int)
+        selected_team = next((team for team in managed_teams if team.id == selected_team_id), managed_teams[0])
 
         if request.method == 'POST':
-            # Handle form submissions for call sequence and team notes
             if 'update_sequence' in request.form:
-                new_sequence = request.form.getlist('user_sequence')
-                for index, user_id in enumerate(new_sequence):
-                    user = db_session.query(User).get(user_id)
-                    if user and user.team_id == team.id:
-                        user.call_sequence = index + 1
-                db_session.commit()
-                flash('Call sequence updated successfully.', 'success')
+                try:
+                    new_sequence = request.form.getlist('user_sequence')
+                    for index, user_id in enumerate(new_sequence):
+                        user = db_session.query(User).get(int(user_id))
+                        if user and user.team_id == selected_team.id:
+                            user.call_sequence = index + 1
+                    db_session.commit()
+                    flash(f"{selected_team.name} Call Sequence Updated", 'success')
+                    return redirect(url_for('manager.my_team', team_id=selected_team.id))
+                except Exception as e:
+                    db_session.rollback()
+                    logger.error(f"Error updating call sequence: {str(e)}")
+                    flash(f"Error updating call sequence: {str(e)}", 'danger')
+                    return redirect(url_for('manager.my_team', team_id=selected_team.id))
             
             elif 'add_note' in request.form:
                 note_content = request.form.get('note_content')
+                is_priority = request.form.get('is_priority') == 'on'
                 if note_content:
-                    new_note = Note(content=note_content, created_at=datetime.utcnow(), team_id=team.id)
-                    db_session.add(new_note)
-                    db_session.commit()
-                    flash('Team note added successfully.', 'success')
+                    try:
+                        new_note = Note(content=note_content, created_at=datetime.utcnow(), team_id=selected_team.id, is_priority=is_priority)
+                        db_session.add(new_note)
+                        db_session.commit()
+                        flash("Team note added successfully", 'success')
+                        return redirect(url_for('manager.my_team', team_id=selected_team.id))
+                    except Exception as e:
+                        db_session.rollback()
+                        logger.error(f"Error adding note: {str(e)}")
+                        flash("An error occurred while adding the note.", 'danger')
+                        return redirect(url_for('manager.my_team', team_id=selected_team.id))
+                else:
+                    flash("Note content is required.", 'warning')
+                    return redirect(url_for('manager.my_team', team_id=selected_team.id))
 
-        team_members = db_session.query(User).filter_by(team_id=team.id).order_by(User.call_sequence).all()
-        team_notes = db_session.query(Note).filter_by(team_id=team.id).order_by(Note.created_at.desc()).all()
+        # Fetch team members and notes
+        team_members = db_session.query(User).filter_by(team_id=selected_team.id).order_by(User.call_sequence).all()
+        team_notes = db_session.query(Note).filter_by(team_id=selected_team.id, is_archived=False).order_by(Note.created_at.desc()).all()
+        archived_notes = db_session.query(Note).filter_by(team_id=selected_team.id, is_archived=True).order_by(Note.created_at.desc()).all()
 
-        return render_template('my_team.html', team=team, team_members=team_members, team_notes=team_notes)
+        # Add a debug log statement to log the notes
+        logger.debug(f"Fetched notes for team {selected_team.id}: {[note.content for note in team_notes]}")
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                "status": "success",
+                "html": render_template('my_team.html', 
+                                        managed_teams=managed_teams,
+                                        selected_team=selected_team, 
+                                        team_members=team_members, 
+                                        team_notes=team_notes,
+                                        archived_notes=archived_notes)
+            })
+        return render_template('my_team.html', 
+                               managed_teams=managed_teams,
+                               selected_team=selected_team, 
+                               team_members=team_members, 
+                               team_notes=team_notes,
+                               archived_notes=archived_notes)
     except Exception as e:
         logger.error(f"Error in my_team route: {str(e)}")
         logger.error(traceback.format_exc())
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"})
         flash('An error occurred while loading the team management page.', 'error')
-        return redirect(url_for('main.index'))
+        return render_template('my_team.html', managed_teams=[], selected_team=None, team_members=[], team_notes=[], archived_notes=[])
+    finally:
+        db_session.close()
+
+@manager.route('/edit_note/<int:note_id>', methods=['POST'])
+@login_required
+@manager_required
+def edit_note(note_id):
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        note = db_session.query(Note).get(note_id)
+        if note and note.team.manager_id == current_user.id:
+            note.content = request.form.get('content')
+            note.is_priority = request.form.get('is_priority') == 'true'
+            db_session.commit()
+            return jsonify({"status": "success"})
+        return jsonify({"status": "error", "message": "Note not found or unauthorized"}), 404
+    except Exception as e:
+        logger.error(f"Error in edit_note route: {str(e)}")
+        return jsonify({"status": "error", "message": "An error occurred while editing the note"}), 500
+    finally:
+        db_session.close()
+
+@manager.route('/archive_note/<int:note_id>', methods=['POST'])
+@login_required
+@manager_required
+def archive_note(note_id):
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        note = db_session.query(Note).get(note_id)
+        if note and note.team.manager_id == current_user.id:
+            note.is_archived = True
+            db_session.commit()
+            return jsonify({"status": "success"})
+        return jsonify({"status": "error", "message": "Note not found or unauthorized"}), 404
+    except Exception as e:
+        logger.error(f"Error in archive_note route: {str(e)}")
+        return jsonify({"status": "error", "message": "An error occurred while archiving the note"}), 500
+    finally:
+        db_session.close()
+
+@manager.route('/delete_note/<int:note_id>', methods=['POST'])
+@login_required
+@manager_required
+def delete_note(note_id):
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        note = db_session.query(Note).get(note_id)
+        if note and note.team.manager_id == current_user.id:
+            db_session.delete(note)
+            db_session.commit()
+            return jsonify({"status": "success"})
+        return jsonify({"status": "error", "message": "Note not found or unauthorized"}), 404
+    except Exception as e:
+        logger.error(f"Error in delete_note route: {str(e)}")
+        return jsonify({"status": "error", "message": "An error occurred while deleting the note"}), 500
+    finally:
+        db_session.close()
+
+@manager.route('/unarchive_note/<int:note_id>', methods=['POST'])
+@login_required
+@manager_required
+def unarchive_note(note_id):
+    db_session = current_app.extensions['sqlalchemy']['db_session']
+    try:
+        note = db_session.query(Note).get(note_id)
+        if note and note.team.manager_id == current_user.id:
+            note.is_archived = False
+            db_session.commit()
+            return jsonify({"status": "success"})
+        return jsonify({"status": "error", "message": "Note not found or unauthorized"}), 404
+    except Exception as e:
+        logger.error(f"Error in unarchive_note route: {str(e)}")
+        return jsonify({"status": "error", "message": "An error occurred while activating the note"}), 500
     finally:
         db_session.close()

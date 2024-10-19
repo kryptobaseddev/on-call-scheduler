@@ -1,42 +1,27 @@
-├── __pycache__
-│  ├── app.cpython-310.pyc
-│  ├── app.cpython-311.pyc
-│  ├── models.cpython-311.pyc
-│  ├── routes.cpython-311.pyc
-│  ├── scheduling_algorithm.cpython-311.pyc
-│  └── utils.cpython-311.pyc
-├── .cache
-├── .local
-├── .pythonlibs
-├── .replit
-├── .upm
-│  └── store.json
 ├── app.py
 ├── generated-icon.png
+├── gitcommit.sh
 ├── main.py
 ├── migrations
 │  ├── __pycache__
+│  │  ├── env.cpython-310.pyc
 │  │  └── env.cpython-311.pyc
 │  ├── alembic.ini
 │  ├── env.py
 │  ├── README
 │  ├── script.py.mako
 │  └── versions
-│    ├── __pycache__
-│    │  ├── 246f6a88d9be_add_mobile_phone_to_user_model.cpython-311.pyc
-│    │  └── 2e394f54baff_add_useractivity_model_for_tracking_.cpython-311.pyc
-│    ├── 246f6a88d9be_add_mobile_phone_to_user_model.py
-│    └── 2e394f54baff_add_useractivity_model_for_tracking_.py
 ├── migrations.py
 ├── models.py
+├── project.tree
 ├── pyproject.toml
-├── replit_zip_error_log.txt
-├── replit.nix
+├── requirements.txt
 ├── routes.py
 ├── scheduling_algorithm.py
 ├── static
 │  ├── css
 │  │  └── custom.css
+│  ├── favicon.ico
 │  └── js
 │    ├── main.js
 │    ├── schedule.js
@@ -48,9 +33,11 @@
 │  ├── base.html
 │  ├── custom_report.html
 │  ├── dashboard.html
+│  ├── edit_schedule.html
 │  ├── edit_team.html
 │  ├── edit_user.html
 │  ├── login.html
+│  ├── my_team.html
 │  ├── schedule.html
 │  ├── team_management.html
 │  ├── time_off_request.html

@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Edit Team</h1>
+    <h1 class="mb-4">Edit Team: {{ team.name }}</h1>
 
     <div class="card">
         <div class="card-body">
@@ -32,6 +32,7 @@
                         {% endfor %}
                     </div>
                     <input type="hidden" id="color" name="color" value="{{ team.color }}" required />
+                    <small class="form-text text-muted">Current color: <span id="currentColor">{{ team.color }}</span></small>
                 </div>
                 <button type="submit" class="btn btn-primary">Update Team</button>
                 <a href="{{ url_for('admin.manage_teams') }}" class="btn btn-secondary">Cancel</a>
@@ -58,25 +59,27 @@
 </style>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const colorOptions = document.querySelectorAll('.color-option');
-        const colorInput = document.getElementById('color');
-        const usedColors = new Set({{ used_colors|tojson }});
-    
-        colorOptions.forEach(option => {
-            const color = option.dataset.color;
-            if (usedColors.has(color) && color !== '{{ team.color }}') {
-                option.classList.add('used');
-            } else {
-                option.addEventListener('click', function() {
-                    if (!this.classList.contains('used')) {
-                        colorOptions.forEach(opt => opt.classList.remove('selected'));
-                        this.classList.add('selected');
-                        colorInput.value = color;
-                    }
-                });
-            }
-        });
+document.addEventListener('DOMContentLoaded', function() {
+    const colorOptions = document.querySelectorAll('.color-option');
+    const colorInput = document.getElementById('color');
+    const currentColorSpan = document.getElementById('currentColor');
+    const usedColors = new Set({{ used_colors|tojson }});
+
+    colorOptions.forEach(option => {
+        const color = option.dataset.color;
+        if (usedColors.has(color) && color !== '{{ team.color }}') {
+            option.classList.add('used');
+        } else {
+            option.addEventListener('click', function() {
+                if (!this.classList.contains('used')) {
+                    colorOptions.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    colorInput.value = color;
+                    currentColorSpan.textContent = color;
+                }
+            });
+        }
     });
-    </script>
+});
+</script>
 {% endblock %}

@@ -42,7 +42,7 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">Team Notes</h5>
+                    <h5 class="card-title">Notes for {{ current_user.team.name }} Team</h5>
                     <ul class="list-group">
                     {% for note in notes %}
                         <li class="list-group-item">

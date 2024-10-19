@@ -2,62 +2,236 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">My Team: {{ team.name }}</h1>
+    <h1 class="mb-4">My Teams</h1>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Team Members and Call Sequence</h5>
-                    <form action="{{ url_for('manager.my_team') }}" method="POST">
-                        <ul class="list-group" id="sortableList">
-                            {% for member in team_members %}
-                            <li class="list-group-item" data-user-id="{{ member.id }}">
-                                <i class="fas fa-grip-lines me-2"></i>
-                                {{ member.username }} ({{ member.email }})
-                                <input type="hidden" name="user_sequence" value="{{ member.id }}">
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        <button type="submit" name="update_sequence" class="btn btn-primary mt-3">Update Call Sequence</button>
-                    </form>
-                </div>
+    {% if managed_teams %}
+        <form action="{{ url_for('manager.my_team') }}" method="GET" class="mb-4">
+            <div class="form-group">
+                <label for="team_select">Select Team:</label>
+                <select name="team_id" id="team_select" class="form-control" onchange="this.form.submit()">
+                    {% for team in managed_teams %}
+                        <option value="{{ team.id }}" {% if selected_team and team.id == selected_team.id %}selected{% endif %}>
+                            {{ team.name }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
-        </div>
+        </form>
 
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Team Notes</h5>
-                    <form action="{{ url_for('manager.my_team') }}" method="POST" class="mb-3">
-                        <div class="mb-3">
-                            <textarea class="form-control" name="note_content" rows="3" required></textarea>
+        {% if selected_team %}
+            <h2>{{ selected_team.name }}</h2>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Team Members and Call Sequence</h5>
+                            <form id="callSequenceForm" action="{{ url_for('manager.my_team') }}" method="POST">
+                                <input type="hidden" name="team_id" value="{{ selected_team.id }}">
+                                <ul class="list-group" id="sortableList">
+                                    {% for member in team_members %}
+                                    <li class="list-group-item d-flex align-items-center" data-user-id="{{ member.id }}">
+                                        <span class="me-2 call-sequence-number">{{ loop.index }}</span>
+                                        <i class="fas fa-grip-lines me-2 handle"></i>
+                                        {{ member.username }} ({{ member.email }})
+                                        <input type="hidden" name="user_sequence" value="{{ member.id }}">
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                <button type="submit" name="update_sequence" class="btn btn-primary mt-3">Update Call Sequence</button>
+                            </form>
                         </div>
-                        <button type="submit" name="add_note" class="btn btn-primary">Add Note</button>
-                    </form>
-                    <ul class="list-group">
-                        {% for note in team_notes %}
-                        <li class="list-group-item">
-                            <small class="text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                            <p class="mb-0">{{ note.content }}</p>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                    </div>
+                </div>
+
+                <!-- Show all notes for the selected team -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Team Notes</h5>
+                            <form action="{{ url_for('manager.my_team') }}" method="POST" class="mb-3">
+                                <input type="hidden" name="team_id" value="{{ selected_team.id }}">
+                                <div class="mb-3">
+                                    <textarea class="form-control" name="note_content" rows="3" required></textarea>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" name="is_priority" id="isPriority">
+                                    <label class="form-check-label" for="isPriority">
+                                        Mark as Priority
+                                    </label>
+                                </div>
+                                <button type="submit" name="add_note" class="btn btn-primary">Add Note</button>
+                            </form>
+                            <ul class="list-group" id="teamNotesList">
+                                {% for note in team_notes %}
+                                <li class="list-group-item {% if note.is_priority %}list-group-item-warning{% endif %}">
+                                    <small class="text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    <p class="mb-0">{{ note.content }}</p>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-primary edit-note" 
+                                                data-note-id="{{ note.id }}" 
+                                                data-note-content="{{ note.content }}" 
+                                                data-note-is-priority="{{ note.is_priority }}" 
+                                                data-note-created-at="{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}" >Edit</button>
+                                        <button class="btn btn-sm btn-secondary archive-note"
+                                                data-note-id="{{ note.id }}"
+                                                data-note-content="{{ note.content }}"
+                                                data-note-is-priority="{{ note.is_priority }}"
+                                                data-note-created-at="{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}" >Archive</button>
+                                        <button class="btn btn-sm btn-outline-danger delete-note"
+                                                data-note-id="{{ note.id }}"
+                                                data-note-content="{{ note.content }}"
+                                                data-note-is-priority="{{ note.is_priority }}"
+                                                data-note-created-at="{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}" >Delete</button>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
+
+            <!-- Archived Notes Section -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Archived Notes</h5>
+                            <ul class="list-group" id="archivedNotesList">
+                                {% for note in archived_notes %}
+                                <li class="list-group-item text-muted">
+                                    <small class="text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    <p class="mb-0">{{ note.content }}</p>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-success activate-note"
+                                                data-note-id="{{ note.id }}">Make Active</button>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <p>You don't manage any Teams. <a href="{{ url_for('admin.manage_teams') }}">Go to Manage Teams</a></p>
+    {% endif %}
 </div>
 {% endblock %}
-
+    
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script src="{{ url_for('static', filename='js/utils.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var el = document.getElementById('sortableList');
-    new Sortable(el, {
-        animation: 150,
-        ghostClass: 'blue-background-class'
+    if (el) {
+        new Sortable(el, {
+            animation: 150,
+            ghostClass: 'blue-background-class',
+            handle: '.handle',
+            onEnd: function() {
+                updateCallSequenceNumbers();
+            }
+        });
+    }
+
+    function updateCallSequenceNumbers() {
+        document.querySelectorAll('#sortableList .call-sequence-number').forEach((span, index) => {
+            span.textContent = index + 1;
+        });
+    }
+
+    document.getElementById('callSequenceForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Update the hidden input values to match the new order
+        const listItems = document.querySelectorAll('#sortableList li');
+        listItems.forEach((item, index) => {
+            const hiddenInput = item.querySelector('input[name="user_sequence"]');
+            hiddenInput.value = item.dataset.userId;
+        });
+
+        fetch(this.action, {
+            method: 'POST',
+            body: new FormData(this),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                showNotification('success', data.message);
+            } else {
+                showNotification('danger', data.message || 'An error occurred while updating the call sequence.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('danger', 'An unexpected error occurred. Please try again.');
+        });
+    });
+
+    document.querySelectorAll('.edit-note').forEach(button => {
+       button.addEventListener('click', function() {
+           const noteId = this.dataset.noteId;
+           const noteContent = this.closest('.list-group-item').querySelector('p').textContent;
+           const isPriority = this.closest('.list-group-item').classList.contains('list-group-item-warning');
+           const newContent = prompt('Edit note:', noteContent);
+           if (newContent !== null) {
+               fetch(`/manager/edit_note/${noteId}`, {
+                   method: 'POST',
+                   headers: {
+                       'Content-Type': 'application/x-www-form-urlencoded',
+                   },
+                   body: `content=${encodeURIComponent(newContent)}&is_priority=${isPriority}`,
+               })
+               .then(response => response.json())
+               .then(data => {
+                   if (data.status === 'success') {
+                       location.reload();
+                   } else {
+                       showNotification('danger', data.message || 'Error editing note');
+                   }
+                });
+            }
+        });
+    });
+
+    document.querySelectorAll('.archive-note').forEach(button => {
+        button.addEventListener('click', function() {
+            const noteId = this.dataset.noteId;
+            if (confirm('Are you sure you want to archive this note?')) {
+                fetch(`/manager/archive_note/${noteId}`, {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
+                        showNotification('danger', 'Error archiving note');
+                    }
+                });
+            }
+        });
+    });
+
+    document.querySelectorAll('.delete-note').forEach(button => {
+    button.addEventListener('click', function() {
+        const noteId = this.dataset.noteId;
+        const deleteUrl = `/manager/delete_note/${noteId}`;
+        showDeleteConfirmationModal(deleteUrl, () => location.reload());
+        });
     });
 });
 </script>

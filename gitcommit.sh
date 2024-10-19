@@ -63,9 +63,11 @@ else
     if [ "$add_origin" == "y" ]; then
         read -p "Enter the remote repository URL: " remote_url
         git remote add origin $remote_url
+        print_color "32" "Remote origin added. Proceeding with pull and push steps."
     else
-        print_color "31" "No remote origin set. Skipping pull and push steps."
-        exit 1
+        print_color "31" "No remote origin set. Proceeding with local-only changes."
+        # Continue with local changes only
+        exit 0
     fi
 fi
 
