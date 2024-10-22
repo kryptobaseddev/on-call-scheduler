@@ -1,4 +1,4 @@
-function showNotification(type, message) {
+export function showNotification(type, message) {
     const notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) {
         const container = document.createElement('div');
@@ -25,7 +25,7 @@ function showNotification(type, message) {
     }, 5000);
 }
 
-function showDeleteConfirmationModal(deleteUrl, onSuccess) {
+export function showDeleteConfirmationModal(deleteUrl, onSuccess) {
     const confirmDeleteButton = document.getElementById('confirmDeleteButton');
     const deleteConfirmationModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
 
@@ -53,3 +53,7 @@ function showDeleteConfirmationModal(deleteUrl, onSuccess) {
 
     deleteConfirmationModal.show();
 }
+
+// Make functions available globally
+// window.showNotification = showNotification;
+// window.showDeleteConfirmationModal = showDeleteConfirmationModal;

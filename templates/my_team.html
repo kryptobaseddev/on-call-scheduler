@@ -49,7 +49,7 @@
                     <div class="card mb-4">
                         <div class="card-body">
                             <h5 class="card-title">Team Notes</h5>
-                            <form action="{{ url_for('manager.my_team') }}" method="POST" class="mb-3">
+                            <form id="addNoteForm" action="{{ url_for('manager.my_team') }}" method="POST">
                                 <input type="hidden" name="team_id" value="{{ selected_team.id }}">
                                 <div class="mb-3">
                                     <textarea class="form-control" name="note_content" rows="3" required></textarea>
@@ -72,17 +72,27 @@
                                                 data-note-id="{{ note.id }}" 
                                                 data-note-content="{{ note.content }}" 
                                                 data-note-is-priority="{{ note.is_priority }}" 
-                                                data-note-created-at="{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}" >Edit</button>
+                                                data-note-created-at="{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}">Edit</button>
                                         <button class="btn btn-sm btn-secondary archive-note"
-                                                data-note-id="{{ note.id }}"
-                                                data-note-content="{{ note.content }}"
-                                                data-note-is-priority="{{ note.is_priority }}"
-                                                data-note-created-at="{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}" >Archive</button>
+                                                data-note-id="{{ note.id }}">Archive</button>
                                         <button class="btn btn-sm btn-outline-danger delete-note"
-                                                data-note-id="{{ note.id }}"
-                                                data-note-content="{{ note.content }}"
-                                                data-note-is-priority="{{ note.is_priority }}"
-                                                data-note-created-at="{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}" >Delete</button>
+                                                data-note-id="{{ note.id }}">Delete</button>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            
+                            <h5 class="card-title mt-4">Archived Notes</h5>
+                            <ul class="list-group" id="archivedNotesList">
+                                {% for note in archived_notes %}
+                                <li class="list-group-item {% if note.is_priority %}list-group-item-warning{% endif %}">
+                                    <small class="text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    <p class="mb-0">{{ note.content }}</p>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-secondary unarchive-note"
+                                                data-note-id="{{ note.id }}">Unarchive</button>
+                                        <button class="btn btn-sm btn-outline-danger delete-note"
+                                                data-note-id="{{ note.id }}">Delete</button>
                                     </div>
                                 </li>
                                 {% endfor %}
@@ -121,118 +131,7 @@
     {% endif %}
 </div>
 {% endblock %}
-    
+
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
-<script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var el = document.getElementById('sortableList');
-    if (el) {
-        new Sortable(el, {
-            animation: 150,
-            ghostClass: 'blue-background-class',
-            handle: '.handle',
-            onEnd: function() {
-                updateCallSequenceNumbers();
-            }
-        });
-    }
 
-    function updateCallSequenceNumbers() {
-        document.querySelectorAll('#sortableList .call-sequence-number').forEach((span, index) => {
-            span.textContent = index + 1;
-        });
-    }
-
-    document.getElementById('callSequenceForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Update the hidden input values to match the new order
-        const listItems = document.querySelectorAll('#sortableList li');
-        listItems.forEach((item, index) => {
-            const hiddenInput = item.querySelector('input[name="user_sequence"]');
-            hiddenInput.value = item.dataset.userId;
-        });
-
-        fetch(this.action, {
-            method: 'POST',
-            body: new FormData(this),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.status === 'success') {
-                showNotification('success', data.message);
-            } else {
-                showNotification('danger', data.message || 'An error occurred while updating the call sequence.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('danger', 'An unexpected error occurred. Please try again.');
-        });
-    });
-
-    document.querySelectorAll('.edit-note').forEach(button => {
-       button.addEventListener('click', function() {
-           const noteId = this.dataset.noteId;
-           const noteContent = this.closest('.list-group-item').querySelector('p').textContent;
-           const isPriority = this.closest('.list-group-item').classList.contains('list-group-item-warning');
-           const newContent = prompt('Edit note:', noteContent);
-           if (newContent !== null) {
-               fetch(`/manager/edit_note/${noteId}`, {
-                   method: 'POST',
-                   headers: {
-                       'Content-Type': 'application/x-www-form-urlencoded',
-                   },
-                   body: `content=${encodeURIComponent(newContent)}&is_priority=${isPriority}`,
-               })
-               .then(response => response.json())
-               .then(data => {
-                   if (data.status === 'success') {
-                       location.reload();
-                   } else {
-                       showNotification('danger', data.message || 'Error editing note');
-                   }
-                });
-            }
-        });
-    });
-
-    document.querySelectorAll('.archive-note').forEach(button => {
-        button.addEventListener('click', function() {
-            const noteId = this.dataset.noteId;
-            if (confirm('Are you sure you want to archive this note?')) {
-                fetch(`/manager/archive_note/${noteId}`, {
-                    method: 'POST',
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        location.reload();
-                    } else {
-                        showNotification('danger', 'Error archiving note');
-                    }
-                });
-            }
-        });
-    });
-
-    document.querySelectorAll('.delete-note').forEach(button => {
-    button.addEventListener('click', function() {
-        const noteId = this.dataset.noteId;
-        const deleteUrl = `/manager/delete_note/${noteId}`;
-        showDeleteConfirmationModal(deleteUrl, () => location.reload());
-        });
-    });
-});
-</script>
 {% endblock %}

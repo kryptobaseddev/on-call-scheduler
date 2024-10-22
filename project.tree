@@ -1,7 +1,9 @@
 ├── app.py
+├── extensions.py
 ├── generated-icon.png
 ├── gitcommit.sh
 ├── main.py
+├── run.py
 ├── migrations
 │  ├── __pycache__
 │  │  ├── env.cpython-310.pyc
@@ -31,12 +33,14 @@
 │  ├── advanced_schedule.html
 │  ├── analytics_dashboard.html
 │  ├── base.html
+│  ├── color_selection_modal.html
 │  ├── custom_report.html
 │  ├── dashboard.html
 │  ├── edit_schedule.html
 │  ├── edit_team.html
 │  ├── edit_user.html
 │  ├── login.html
+│  ├── manage_colors.html
 │  ├── my_team.html
 │  ├── schedule.html
 │  ├── team_management.html

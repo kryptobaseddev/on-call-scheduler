@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+export function initializeSchedule() {
     const scheduleForm = document.getElementById('schedule-form');
     if (scheduleForm) {
         scheduleForm.addEventListener('submit', function(e) {
@@ -27,4 +27,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-});
+
+    document.querySelectorAll('.delete-schedule').forEach(button => {
+        button.addEventListener('click', function() {
+            const scheduleId = this.dataset.scheduleId;
+            const deleteUrl = `/manager/delete_schedule/${scheduleId}`;
+            window.showDeleteConfirmationModal(deleteUrl, () => location.reload());
+        });
+    });
+}

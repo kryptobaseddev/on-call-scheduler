@@ -1,0 +1,11 @@
+username,email,password,role,first_name,last_name,mobile_phone,work_phone,timezone,is_active
+user1,user1@example.com,password1,User,John,Doe,1234567890,0987654321,UTC,True
+user2,user2@example.com,password2,User,Jane,Smith,1234567891,0987654322,UTC,True
+user3,user3@example.com,password3,User,Bob,Johnson,1234567892,0987654323,UTC,True
+user4,user4@example.com,password4,User,Alice,Williams,1234567893,0987654324,UTC,True
+user5,user5@example.com,password5,User,Charlie,Brown,1234567894,0987654325,UTC,True
+user6,user6@example.com,password6,User,Emily,Davis,1234567895,0987654326,UTC,True
+user7,user7@example.com,password7,User,Frank,Wilson,1234567896,0987654327,UTC,True
+manager1,manager1@example.com,password8,Manager,Mary,Jones,1234567897,0987654328,UTC,True
+manager2,manager2@example.com,password9,Manager,David,Miller,1234567898,0987654329,UTC,True
+admin2,admin2@example.com,password10,Admin,Susan,Moore,1234567899,0987654330,UTC,True

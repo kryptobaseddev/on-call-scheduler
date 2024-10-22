@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Edit Team: {{ team.name }}</h1>
+    <h1 class="mb-4">Create New Team</h1>
     <div class="card">
         <div class="card-body">
             <form method="POST">
@@ -16,13 +16,13 @@
                 </div>
                 <div class="mb-3">
                     <label for="color_id" class="form-label">Team Color</label>
-                    <input type="hidden" id="color_id" name="color_id" value="{{ team.color_id }}" required>
+                    <input type="hidden" id="color_id" name="color_id" required>
                     <div class="mt-2">
-                        <small class="form-text text-muted">Current color: <span id="currentColor" class="color-preview" style="background-color: {{ team.color.hex_value }};"></span></small>
+                        <small class="form-text text-muted">Current color: <span id="currentColor" class="color-preview" style="background-color: #000;"></span></small>
                     </div>
                     <button type="button" class="btn btn-secondary mt-2" data-bs-toggle="modal" data-bs-target="#colorModal">Select Color</button>
                 </div>
-                <button type="submit" class="btn btn-primary">Update Team</button>
+                <button type="submit" class="btn btn-primary">Create Team</button>
                 <a href="{{ url_for('admin.manage_teams') }}" class="btn btn-secondary">Cancel</a>
             </form>
         </div>

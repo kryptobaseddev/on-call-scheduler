@@ -2,14 +2,8 @@
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">Team Management</h1>
-    
-    <!-- Create New Team Button -->
     <a href="{{ url_for('admin.create_team') }}" class="btn btn-primary mb-3">Create New Team</a>
     
-    <!-- Link to Manage Colors -->
-    <a href="{{ url_for('admin.manage_colors') }}" class="btn btn-info mb-3 ms-2">Manage Colors</a>
-
-    <!-- Display Existing Teams -->
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Existing Teams</h5>
@@ -42,8 +36,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/team_management.js') }}"></script>
 {% endblock %}

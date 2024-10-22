@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Team Details: {{ team.name }}</h1>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Team Information</h5>
+            <p><strong>Manager:</strong> {{ team.manager.username if team.manager else 'No Manager' }}</p>
+            <p><strong>Color:</strong> <span class="color-preview" style="background-color: {{ team.color.hex_value }};"></span> {{ team.color.hex_value }}</p>
+            
+            <h5 class="mt-4">Team Members</h5>
+            <ul>
+                {% for user in team.users %}
+                    <li>{{ user.username }} ({{ user.email }})</li>
+                {% else %}
+                    <li>No team members</li>
+                {% endfor %}
+            </ul>
+            
+            <a href="{{ url_for('admin.edit_team', team_id=team.id) }}" class="btn btn-primary">Edit Team</a>
+            <a href="{{ url_for('admin.manage_teams') }}" class="btn btn-secondary">Back to Team Management</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

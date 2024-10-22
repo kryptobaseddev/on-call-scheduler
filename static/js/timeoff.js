@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+export function initializeTimeOff() {
     const timeOffForm = document.getElementById('time-off-form');
     if (timeOffForm) {
         timeOffForm.addEventListener('submit', function(e) {
@@ -26,4 +26,4 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-});
+}

@@ -9,12 +9,7 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">On-Call Schedule</h5>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="viewToggle">
-                            <label class="form-check-label" for="viewToggle">Toggle Monthly/Weekly View</label>
-                        </div>
-                    </div>
+                    <p class="card-text">Current time: {{ user_local_time.strftime('%Y-%m-%d %H:%M') }}</p>
                     <div id="calendar"></div>
                 </div>
             </div>
@@ -23,6 +18,7 @@
     
     <div class="row">
         <div class="col-md-6">
+            {% include 'components/on_call_list.html' %}
             <div class="card mb-4">
                 <div class="card-body">
                     <h5 class="card-title">My Upcoming On-Call Dates</h5>
@@ -80,55 +76,22 @@
 {% endblock %}
 
 {% block extra_js %}
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.css' rel='stylesheet' />
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js'></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var calendarEl = document.getElementById('calendar');
-    var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        events: [
-            {% for schedule in all_schedules %}
-            {
-                title: '{{ schedule.user.username }} ({{ schedule.user.team.name }})',
-                start: '{{ schedule.start_time.isoformat() }}',
-                end: '{{ schedule.end_time.isoformat() }}',
-                color: '{{ schedule.user.team.color if schedule.user.team else "#000000" }}',
-                extendedProps: {
-                    teamName: '{{ schedule.user.team.name if schedule.user.team else "No Team" }}',
-                    userName: '{{ schedule.user.username }}',
-                    mobilePhone: '{{ schedule.user.mobile_phone if schedule.user.mobile_phone else "N/A" }}'
-                }
-            },
-            {% endfor %}
-        ],
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek'
+    var calendarEvents = [
+        {% for schedule in all_schedules %}
+        {
+            title: '{{ schedule.user.username }} ({{ schedule.user.team.name if schedule.user.team else "No Team" }})',
+            start: '{{ schedule.start_time.isoformat() }}',
+            end: '{{ schedule.end_time.isoformat() }}',
+            color: '{{ schedule.user.team.color.hex_value if schedule.user.team and schedule.user.team.color else "#000000" }}',
+            extendedProps: {
+                teamName: '{{ schedule.user.team.name if schedule.user.team else "No Team" }}',
+                userName: '{{ schedule.user.username }}',
+                mobilePhone: '{{ schedule.user.mobile_phone if schedule.user.mobile_phone else "N/A" }}'
+            }
         },
-        eventDidMount: function(info) {
-            var tooltip = new bootstrap.Tooltip(info.el, {
-                title: `Team: ${info.event.extendedProps.teamName}<br>
-                        User: ${info.event.extendedProps.userName}<br>
-                        Phone: ${info.event.extendedProps.mobilePhone}`,
-                html: true,
-                placement: 'top',
-                trigger: 'hover',
-                container: 'body'
-            });
-        }
-    });
-    calendar.render();
-
-    // Toggle between monthly and weekly views
-    document.getElementById('viewToggle').addEventListener('change', function(e) {
-        if (e.target.checked) {
-            calendar.changeView('timeGridWeek');
-        } else {
-            calendar.changeView('dayGridMonth');
-        }
-    });
-});
+        {% endfor %}
+    ];
 </script>
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
 {% endblock %}

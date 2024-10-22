@@ -7,39 +7,47 @@
     <div class="card mb-4">
         <div class="card-body">
             <h5 class="card-title">Add New User</h5>
-            <form action="{{ url_for('admin.manage_users') }}" method="POST">
+            <form method="POST">
+                {{ form.hidden_tag() }}
                 <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
+                    {{ form.username.label(class="form-label") }}
+                    {{ form.username(class="form-control") }}
                 </div>
                 <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
+                    {{ form.first_name.label(class="form-label") }}
+                    {{ form.first_name(class="form-control") }}
                 </div>
                 <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                    {{ form.last_name.label(class="form-label") }}
+                    {{ form.last_name(class="form-control") }}
                 </div>
                 <div class="mb-3">
-                    <label for="mobile_phone" class="form-label">Mobile Phone</label>
-                    <input type="tel" class="form-control" id="mobile_phone" name="mobile_phone">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control") }}
                 </div>
                 <div class="mb-3">
-                    <label for="role" class="form-label">Role</label>
-                    <select class="form-select" id="role" name="role" required>
-                        <option value="user">User</option>
-                        <option value="manager">Manager</option>
-                        <option value="admin">Admin</option>
-                    </select>
+                    {{ form.work_phone.label(class="form-label") }}
+                    {{ form.work_phone(class="form-control") }}
                 </div>
                 <div class="mb-3">
-                    <label for="team_id" class="form-label">Team</label>
-                    <select class="form-select" id="team_id" name="team_id">
-                        <option value="">No Team</option>
-                        {% for team in teams %}
-                            <option value="{{ team.id }}">{{ team.name }}</option>
-                        {% endfor %}
-                    </select>
+                    {{ form.mobile_phone.label(class="form-label") }}
+                    {{ form.mobile_phone(class="form-control") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.timezone.label(class="form-label") }}
+                    {{ form.timezone(class="form-select") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.role_id.label(class="form-label") }}
+                    {{ form.role_id(class="form-select") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.team_id.label(class="form-label") }}
+                    {{ form.team_id(class="form-select") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control") }}
                 </div>
                 <button type="submit" class="btn btn-primary">Add User</button>
             </form>
@@ -56,10 +64,14 @@
                 <thead>
                     <tr>
                         <th>Username</th>
+                        <th>Name</th>
                         <th>Email</th>
+                        <th>Work Phone</th>
                         <th>Mobile Phone</th>
+                        <th>Timezone</th>
                         <th>Role</th>
                         <th>Team</th>
+                        <th>Active</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -67,10 +79,14 @@
                     {% for user in users %}
                         <tr>
                             <td>{{ user.username }}</td>
+                            <td>{{ user.first_name }} {{ user.last_name }}</td>
                             <td>{{ user.email }}</td>
+                            <td>{{ user.work_phone or 'N/A' }}</td>
                             <td>{{ user.mobile_phone or 'N/A' }}</td>
-                            <td>{{ user.role }}</td>
+                            <td>{{ user.timezone or 'UTC' }}</td>
+                            <td>{{ user.role.name if user.role else 'No Role' }}</td>
                             <td>{{ user.team.name if user.team else 'No Team' }}</td>
+                            <td>{{ user.is_active }}</td>
                             <td>
                                 <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">Edit</a>
                             </td>

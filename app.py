@@ -1,57 +1,45 @@
-from flask import Flask, render_template
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
-import os
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.exc import SQLAlchemyError, OperationalError
-from urllib.parse import urlparse
 import logging
+import os
+from flask import Flask, render_template
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 import traceback
+from extensions import db, migrate, jwt, login_manager
+from routes import main, auth, admin, manager, user, seed_core_colors
+from dotenv import load_dotenv
 
-db = SQLAlchemy()
-migrate = Migrate()
-jwt = JWTManager()
+# Configure logging at the top
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Load environment variables from .env file
+load_dotenv()
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-secret-key')
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'fallback-secret-key')
+    
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+    if app.config['SQLALCHEMY_DATABASE_URI'] is None:
+        raise ValueError("No DATABASE_URL set for Flask application")
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'fallback-jwt-secret-key')
     app.config['JWT_TOKEN_LOCATION'] = ['headers']
+    app.config['DEBUG'] = True
 
-    # Configure logging
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
-
-    # Parse the DATABASE_URL
-    url = urlparse(app.config['SQLALCHEMY_DATABASE_URI'])
-    logger.info(f"Connecting to database: {url.hostname}")
-
-    # Create the SQLAlchemy engine with connection pooling
-    try:
-        engine = create_engine(
-            app.config['SQLALCHEMY_DATABASE_URI'],
-            pool_size=10,
-            max_overflow=20,
-            pool_recycle=1800,
-        )
-        logger.info("Database engine created successfully")
-    except Exception as e:
-        logger.error(f"Error creating database engine: {str(e)}")
-        raise
-
-    # Create a scoped session
-    db_session = scoped_session(sessionmaker(bind=engine))
-
+    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
 
-    login_manager = LoginManager()
+    # Register blueprints
+    app.register_blueprint(main)
+    app.register_blueprint(auth, url_prefix='/auth')
+    app.register_blueprint(admin, url_prefix='/admin')
+    app.register_blueprint(manager, url_prefix='/manager')
+    app.register_blueprint(user, url_prefix='/user')
+
+    # Initialize LoginManager
     login_manager.login_view = 'auth.login'
     login_manager.init_app(app)
 
@@ -59,29 +47,19 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        try:
-            return User.query.get(int(user_id))
-        except SQLAlchemyError as e:
-            logger.error(f"Error loading user: {str(e)}")
-            return None
+        user = User.query.get(int(user_id))
+        logger.debug(f"load_user called with user_id={user_id}, returning user={user}")
+        return user
 
+    # Seed core colors
     with app.app_context():
-        from models import User, Team, Schedule, TimeOffRequest, Note
-        from routes import main, auth, admin, manager, user
-        app.register_blueprint(main)
-        app.register_blueprint(auth, url_prefix='/auth')
-        app.register_blueprint(admin, url_prefix='/admin')
-        app.register_blueprint(manager, url_prefix='/manager')
-        app.register_blueprint(user, url_prefix='/user')
-
-    # Add db_session to app.extensions
-    app.extensions['sqlalchemy'] = {
-        'db_session': db_session
-    }
+        db.create_all()  # Ensure all tables are created
+        seed_core_colors()  # Seed or update core colors
 
     # Global error handler
     @app.errorhandler(Exception)
     def handle_exception(e):
+        db.session.rollback()
         logger.exception("Unhandled exception: %s", str(e))
         return render_template('500.html'), 500
 
@@ -102,3 +80,8 @@ def create_app():
         return response
 
     return app
+
+app = create_app()
+
+if __name__ == '__main__':
+    app.run()

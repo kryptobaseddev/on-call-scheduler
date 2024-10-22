@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Manage Team Colors</h1>
+
+    <!-- Debug output -->
+    <div class="alert alert-info">
+        <h4>Debug Info:</h4>
+        <p>Number of colors: {{ colors|length }}</p>
+        <ul>
+        {% for color in colors %}
+            <li>ID: {{ color.id }}, Hex: {{ color.hex_value }}, Team: {{ color.teams.name if color.teams else 'Unassigned' }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Add New Color</h5>
+            <form action="{{ url_for('admin.manage_colors') }}" method="POST">
+                <div class="mb-3">
+                    <label for="color_picker" class="form-label">Select Color</label>
+                    <input type="color" class="form-control form-control-color" id="color_picker" value="#ffffff" title="Choose your color">
+                </div>
+                <div class="mb-3">
+                    <label for="hex_value" class="form-label">Hex Code</label>
+                    <input type="text" class="form-control" id="hex_value" name="hex_value" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Color</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Existing Colors</h5>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Color</th>
+                        <th>Hex Code</th>
+                        <th>Assigned Team</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for color in colors %}
+                    <tr>
+                        <td>{{ color.id }}</td>
+                        <td>
+                            <span style="background-color: {{ color.hex_value }}; width: 20px; height: 20px; display: inline-block;"></span>
+                        </td>
+                        <td>{{ color.hex_value }}</td>
+                        <td>{{ color.teams.name if color.teams else 'Unassigned' }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.edit_color', color_id=color.id) }}" class="btn btn-primary btn-sm">Edit</a>
+                            <form action="{{ url_for('admin.delete_color', color_id=color.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm" {% if color.teams or color.is_core %}disabled{% endif %}>Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('color_picker').addEventListener('input', function() {
+        document.getElementById('hex_value').value = this.value;
+    });
+</script>
+{% endblock %}

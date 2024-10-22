@@ -1,9 +1,4 @@
 /* Custom styles to complement Bootstrap */
-[data-bs-theme=dark] {
-    --bs-body-bg: #1a1a1a;
-    --bs-body-color: #f8f9fa;
-}
-
 .navbar-brand {
     font-weight: bold;
 }
@@ -13,20 +8,77 @@
 }
 
 .schedule-item {
-    border-left: 4px solid var(--bs-primary);
+    border-left: 4px solid var(--primary-color);
     padding-left: 10px;
     margin-bottom: 10px;
 }
 
 .time-off-request {
-    border-left: 4px solid var(--bs-warning);
+    border-left: 4px solid var(--warning-color);
     padding-left: 10px;
     margin-bottom: 10px;
 }
 
 .note {
-    background-color: var(--bs-dark);
+    background-color: var(--card-background-color);
     border-radius: 5px;
     padding: 10px;
     margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+/* Custom Styles for Slider Theme Toggle */
+.theme-toggle-wrapper {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.theme-toggle-wrapper .theme-toggle-label {
+    margin-right: 10px;
+    color: var(--text-color);
+}
+
+.theme-toggle-slider {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    background-color: var(--secondary-color);
+    border-radius: 15px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.theme-toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background-color: var(--light-color);
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s ease;
+}
+
+[data-bs-theme='dark'] .theme-toggle-slider::before {
+    background-color: var(--dark-color);
+    transform: translateX(30px);
+}
+
+.theme-toggle-slider::after {
+    content: "🌞";
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    transition: opacity 0.3s ease;
+}
+
+[data-bs-theme='dark'] .theme-toggle-slider::after {
+    content: "🌜";
+    left: 65%;
 }

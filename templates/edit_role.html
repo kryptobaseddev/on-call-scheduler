@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Edit Role</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form action="{{ url_for('admin.edit_role', role_id=role.id) }}" method="POST">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Role Name</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ role.name }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3">{{ role.description }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Permissions</label>
+                    {% set permission_groups = {} %}
+                    {% for permission in permissions %}
+                        {% set permission_type = permission.name.split('_')[0] %}
+                        {% if permission_type not in permission_groups %}
+                            {% set _ = permission_groups.update({permission_type: []}) %}
+                        {% endif %}
+                        {% set _ = permission_groups[permission_type].append(permission) %}
+                    {% endfor %}
+
+                    {% set ordered_groups = ['View', 'Manage', 'Request'] %}
+                    {% for group in ordered_groups %}
+                        {% if group in permission_groups %}
+                            <h5>{{ group }}</h5>
+                            {% for permission in permission_groups[group] %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="{{ permission.id }}" id="permission_{{ permission.id }}" name="permissions" {% if permission in role.permissions %}checked{% endif %}>
+                                    <label class="form-check-label" for="permission_{{ permission.id }}">
+                                        {{ permission.description }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% for group, group_permissions in permission_groups.items() %}
+                        {% if group not in ordered_groups %}
+                            <h5>{{ group }}</h5>
+                            {% for permission in group_permissions %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="{{ permission.id }}" id="permission_{{ permission.id }}" name="permissions" {% if permission in role.permissions %}checked{% endif %}>
+                                    <label class="form-check-label" for="permission_{{ permission.id }}">
+                                        {{ permission.description }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary">Update Role</button>
+                <a href="{{ url_for('admin.list_roles') }}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

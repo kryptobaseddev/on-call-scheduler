@@ -1,0 +1,16 @@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Currently On-Call</h5>
+        <ul class="list-group">
+        {% for user in on_call_users %}
+            <li class="list-group-item">
+                <strong>{{ user.username }}</strong> ({{ user.team.name if user.team else "No Team" }})<br>
+                Email: {{ user.email }}<br>
+                Phone: {{ user.mobile_phone if user.mobile_phone else "N/A" }}
+            </li>
+        {% else %}
+            <li class="list-group-item">No users currently on-call</li>
+        {% endfor %}
+        </ul>
+    </div>
+</div>
