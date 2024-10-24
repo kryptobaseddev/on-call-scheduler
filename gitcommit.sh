@@ -84,31 +84,43 @@ if branch_exists "main"; then
     branch_to_pull="main"
 elif branch_exists "develop"; then
     print_color "33" "Main branch does not exist. Using 'develop' branch as default."
-    branch_to_pull="develop"
-else
-    print_color "31" "No main or develop branch found. Please create a branch to proceed."
-    exit 1
+    branch_to_pull="develop"\else
+    print_color "33" "No main or develop branch found. Do you want to create a main branch now? (y/n)"
+    read create_main
+    if [ "$create_main" == "y" ]; then
+        git checkout -b main
+        branch_to_pull="main"
+        print_color "32" "Main branch created."
+    else
+        print_color "31" "Cannot proceed without a main or develop branch. Please create a branch to proceed."
+        exit 1
+    fi
 fi
 
 # Step 7: Pull latest changes from origin
-if [ "$current_branch" != "$branch_to_pull" ]; then
-    print_color "34" "Step 7: Pulling Latest Changes from Origin $branch_to_pull"
-    git fetch origin $branch_to_pull
+print_color "34" "Step 7: Pulling Latest Changes from Origin $branch_to_pull"
+git fetch origin $branch_to_pull
+if [ "$branch_to_pull" != "$current_branch" ]; then
     git checkout $branch_to_pull
-    git pull origin $branch_to_pull
     if [ $? -ne 0 ]; then
-        print_color "31" "Error pulling from origin. Please resolve conflicts if any."
+        print_color "31" "Error checking out branch $branch_to_pull. Please resolve issues if any."
         exit 1
     fi
-    git checkout $current_branch
-    git merge $branch_to_pull
-else
-    print_color "34" "Step 7: Pulling Latest Changes from Origin $branch_to_pull"
-    git pull origin $branch_to_pull
-    if [ $? -ne 0 ]; then
-        print_color "31" "Error pulling from origin. Please resolve conflicts if any."
-        exit 1
-    fi
+fi
+git pull origin $branch_to_pull
+if [ $? -ne 0 ]; then
+    print_color "31" "Error pulling from origin. Please resolve conflicts if any."
+    exit 1
+fi
+git checkout $current_branch
+if [ $? -ne 0 ]; then
+    print_color "31" "Error checking out branch $current_branch after pulling. Please resolve issues if any."
+    exit 1
+fi
+git merge $branch_to_pull
+if [ $? -ne 0 ]; then
+    print_color "31" "Error merging branch $branch_to_pull into $current_branch. Please resolve conflicts if any."
+    exit 1
 fi
 
 # Step 8: Push branch to origin
