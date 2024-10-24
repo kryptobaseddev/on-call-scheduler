@@ -7,6 +7,12 @@ function print_color {
     echo -e "\033[${color_code}m${message}\033[0m"
 }
 
+# Function to check if a branch exists
+function branch_exists {
+    local branch=$1
+    git show-ref --verify --quiet refs/heads/$branch
+}
+
 # Step 1: Define commit message type, scope, and description
 print_color "34" "Step 1: Commit Message Creation"
 echo "Please select the commit type:"
@@ -54,7 +60,7 @@ else
 fi
 
 # Step 5: Check if origin exists
-print_color "34" "Step 4: Checking Git Remote Origin"
+print_color "34" "Step 5: Checking Git Remote Origin"
 if git config remote.origin.url > /dev/null; then
     print_color "32" "Origin found. Proceeding with pull and push steps."
 else
@@ -71,35 +77,60 @@ else
     fi
 fi
 
-# Step 6: Pull latest changes from origin main
-print_color "34" "Step 5: Pulling Latest Changes from Origin Main"
-git pull origin main
-if [ $? -ne 0 ]; then
-    print_color "31" "Error pulling from origin. Please resolve conflicts if any."
+# Step 6: Determine branch to pull from
+print_color "34" "Step 6: Determining Branch to Pull From"
+current_branch=$(git branch --show-current)
+if branch_exists "main"; then
+    branch_to_pull="main"
+elif branch_exists "develop"; then
+    print_color "33" "Main branch does not exist. Using 'develop' branch as default."
+    branch_to_pull="develop"
+else
+    print_color "31" "No main or develop branch found. Please create a branch to proceed."
     exit 1
 fi
 
-# Step 7: Push branch to origin
-print_color "34" "Step 6: Pushing Branch to Origin"
-current_branch=$(git branch --show-current)
+# Step 7: Pull latest changes from origin
+if [ "$current_branch" != "$branch_to_pull" ]; then
+    print_color "34" "Step 7: Pulling Latest Changes from Origin $branch_to_pull"
+    git fetch origin $branch_to_pull
+    git checkout $branch_to_pull
+    git pull origin $branch_to_pull
+    if [ $? -ne 0 ]; then
+        print_color "31" "Error pulling from origin. Please resolve conflicts if any."
+        exit 1
+    fi
+    git checkout $current_branch
+    git merge $branch_to_pull
+else
+    print_color "34" "Step 7: Pulling Latest Changes from Origin $branch_to_pull"
+    git pull origin $branch_to_pull
+    if [ $? -ne 0 ]; then
+        print_color "31" "Error pulling from origin. Please resolve conflicts if any."
+        exit 1
+    fi
+fi
+
+# Step 8: Push branch to origin
+print_color "34" "Step 8: Pushing Branch to Origin"
 git push origin $current_branch
 
-# Step 8: Assess if a Pull Request (PR) is needed
-print_color "34" "Step 7: Assessing Pull Request Requirement"
+# Step 9: Assess if a Pull Request (PR) is needed
+print_color "34" "Step 9: Assessing Pull Request Requirement"
 read -p "Do you need to create a Pull Request for this branch? (y/n): " pr_needed
 if [ "$pr_needed" == "y" ]; then
     print_color "33" "Please create a Pull Request via your Git hosting service (e.g., GitHub, GitLab)."
 fi
 
-# Step 9: Review commits for release and squash if needed
-print_color "34" "Step 8: Reviewing Commits for Release"
+# Step 10: Review commits for release and squash if needed
+print_color "34" "Step 10: Reviewing Commits for Release"
 read -p "Do you need to squash commits before merging? (y/n): " squash_needed
 if [ "$squash_needed" == "y" ]; then
     git rebase -i HEAD~n  # Replace n with the number of commits to review
 fi
 
-# Step 10: Merge the PR with a clean history
-print_color "34" "Step 9: Merging Pull Request"
+# Step 11: Merge the PR with a clean history
+print_color "34" "Step 11: Merging Pull Request"
 echo "Select merge option:"
 select merge_option in "Squash and Merge" "Rebase and Merge"; do
     case $merge_option in
@@ -114,11 +145,11 @@ select merge_option in "Squash and Merge" "Rebase and Merge"; do
     esac
 done
 
-# Step 11: Determine if tagging for release is needed
-print_color "34" "Step 10: Tagging for Release"
+# Step 12: Determine if tagging for release is needed
+print_color "34" "Step 12: Tagging for Release"
 read -p "Is this a release-ready version? (y/n): " release_ready
 if [ "$release_ready" == "y" ]; then
-    # Step 11.1: Manage versioning
+    # Step 12.1: Manage versioning
     if [ ! -f version.txt ]; then
         echo "0.1.0" > version.txt
     fi
@@ -158,8 +189,8 @@ git tag -a $version -m "Release $version: $description"
     git push origin $version
 fi
 
-# Step 12: Update or create the CHANGELOG.md
-print_color "34" "Step 11: Updating CHANGELOG.md"
+# Step 13: Update or create the CHANGELOG.md
+print_color "34" "Step 13: Updating CHANGELOG.md"
 if [ ! -f CHANGELOG.md ]; then
     print_color "33" "CHANGELOG.md not found. Creating one."
     echo "# Changelog" > CHANGELOG.md
