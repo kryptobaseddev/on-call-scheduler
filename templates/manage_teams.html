@@ -7,6 +7,9 @@
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Existing Teams</h5>
+            <div class="mb-3">
+                <input type="text" class="form-control" id="teamSearch" placeholder="Search teams...">
+            </div>
             <table class="table">
                 <thead>
                     <tr>
@@ -16,7 +19,7 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="teamTableBody">
                     {% for team in teams %}
                     <tr>
                         <td>{{ team.name }}</td>

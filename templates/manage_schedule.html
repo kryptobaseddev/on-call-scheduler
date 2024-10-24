@@ -8,21 +8,18 @@
         <div class="card-body">
             <h5 class="card-title">Add New Schedule</h5>
             <form action="{{ url_for('manager.manage_schedule') }}" method="POST">
+                {{ form.hidden_tag() }}
                 <div class="mb-3">
-                    <label for="user_id" class="form-label">User</label>
-                    <select class="form-select" id="user_id" name="user_id" required>
-                        {% for user in users %}
-                            <option value="{{ user.id }}">{{ user.username }}</option>
-                        {% endfor %}
-                    </select>
+                    {{ form.user_id.label(class="form-label") }}
+                    {{ form.user_id(class="form-select") }}
                 </div>
                 <div class="mb-3">
-                    <label for="start_time" class="form-label">Start Time</label>
-                    <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                    {{ form.start_time.label(class="form-label") }}
+                    {{ form.start_time(class="form-control flatpickr-datetime") }}
                 </div>
                 <div class="mb-3">
-                    <label for="end_time" class="form-label">End Time</label>
-                    <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                    {{ form.end_time.label(class="form-label") }}
+                    {{ form.end_time(class="form-control flatpickr-datetime") }}
                 </div>
                 <button type="submit" class="btn btn-primary">Add Schedule</button>
             </form>
@@ -68,42 +65,4 @@
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const scheduleSearch = document.getElementById('scheduleSearch');
-    const scheduleTableBody = document.getElementById('scheduleTableBody');
-    const selectAll = document.getElementById('selectAll');
-    const batchDeleteBtn = document.getElementById('batchDeleteBtn');
-    const checkboxes = document.querySelectorAll('input[name="schedule_ids[]"]');
-
-    scheduleSearch.addEventListener('input', function(e) {
-        const searchText = e.target.value.toLowerCase();
-        const rows = scheduleTableBody.getElementsByTagName('tr');
-        
-        for (let row of rows) {
-            const text = row.textContent.toLowerCase();
-            if (text.includes(searchText)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        }
-    });
-
-    selectAll.addEventListener('change', function() {
-        checkboxes.forEach(checkbox => checkbox.checked = this.checked);
-        updateBatchDeleteButton();
-    });
-
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateBatchDeleteButton);
-    });
-
-    function updateBatchDeleteButton() {
-        const checkedBoxes = document.querySelectorAll('input[name="schedule_ids[]"]:checked');
-        batchDeleteBtn.disabled = checkedBoxes.length === 0;
-    }
-});
-</script>
 {% endblock %}

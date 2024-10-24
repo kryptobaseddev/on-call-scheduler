@@ -1,9 +1,8 @@
 from flask_wtf import FlaskForm
-from wtforms import Form, StringField, SelectField, BooleanField, PasswordField
+from wtforms import StringField, SelectField, BooleanField, PasswordField
 from wtforms.validators import DataRequired, Email, Optional, Length, ValidationError
 from models import Role, Team, TeamColor, User
 import pytz
-from wtforms import validators
 
 class PhoneNumberField(StringField):
     def process_formdata(self, valuelist):
@@ -43,3 +42,21 @@ class TeamForm(FlaskForm):
         super(TeamForm, self).__init__(*args, **kwargs)
         self.manager_id.choices = [(user.id, user.username) for user in User.query.filter(User.role_id.in_([1, 2])).all()]
         self.color_id.choices = [(color.id, color.hex_value) for color in TeamColor.query.all()]
+
+class ScheduleForm(FlaskForm):
+    user_id = SelectField('User', validators=[Optional()], coerce=int)
+    start_time = StringField('Start Time', validators=[DataRequired()])
+    end_time = StringField('End Time', validators=[DataRequired()])
+
+    def __init__(self, *args, **kwargs):
+        super(ScheduleForm, self).__init__(*args, **kwargs)
+        self.user_id.choices = [(user.id, user.username) for user in User.query.all()]
+
+class TimeoffForm(FlaskForm):
+    user_id = SelectField('User', validators=[DataRequired()], coerce=int)
+    start_time = StringField('Start Time', validators=[DataRequired()])
+    end_time = StringField('End Time', validators=[DataRequired()])
+
+    def __init__(self, *args, **kwargs):
+        super(TimeoffForm, self).__init__(*args, **kwargs)
+        self.user_id.choices = [(user.id, user.username) for user in User.query.filter(User.role_id.in_([1, 2])).all()]

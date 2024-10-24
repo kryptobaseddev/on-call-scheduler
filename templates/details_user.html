@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">User Details: {{ user.username }}</h1>
+    <div class="card">
+        <div class="card-body">
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>First Name:</strong> {{ user.first_name }}</p>
+            <p><strong>Last Name:</strong> {{ user.last_name }}</p>
+            <p><strong>Work Phone:</strong> {{ user.work_phone or 'N/A' }}</p>
+            <p><strong>Mobile Phone:</strong> {{ user.mobile_phone or 'N/A' }}</p>
+            <p><strong>Timezone:</strong> {{ user.timezone }}</p>
+            <p><strong>Role:</strong> {{ user.role.name if user.role else 'No Role' }}</p>
+            <p><strong>Team:</strong> {{ user.team.name if user.team else 'No Team' }}</p>
+            <p><strong>Active:</strong> {{ 'Yes' if user.is_active else 'No' }}</p>
+            
+            <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-primary">Edit User</a>
+            <a href="{{ url_for('admin.manage_users') }}" class="btn btn-secondary">Back to User Management</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

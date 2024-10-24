@@ -14,5 +14,7 @@ MANAGE_COLORS = 'manage_colors'
 MANAGE_SCHEDULES = 'manage_schedules'
 MANAGE_PERMISSIONS = 'manage_permissions'
 MANAGE_REPORTS = 'manage_reports'
+MANAGE_TIMEOFF = 'manage_timeoff'
+
 ## Request permissions
 REQUEST_TIME_OFF = 'request_time_off'

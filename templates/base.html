@@ -11,68 +11,68 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.5.0/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+    
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">On-Call Scheduler</a>
+            <a class="navbar-brand" href="{{ url_for('main.dashboard') }}">On-Call Scheduler</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
-                    </li>
                     {% if current_user.is_authenticated %}
                         {% if current_user.has_permission('view_dashboard') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
                         </li>
                         {% endif %}
-
+    
                         {% if current_user.has_permission('manage_users') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin.manage_users') }}">Manage Users</a>
                         </li>
                         {% endif %}
-
+    
                         {% if current_user.has_permission('manage_teams') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin.manage_teams') }}">Manage Teams</a>
                         </li>
                         {% endif %}
-
+    
                         {% if current_user.has_permission('manage_roles') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin.list_roles') }}">Manage Roles</a>
                         </li>
                         {% endif %}
-
+    
                         {% if current_user.has_permission('view_analytics') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin.analytics_dashboard') }}">Analytics</a>
                         </li>
                         {% endif %}
-
+    
                         {% if current_user.has_permission('manage_schedules') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('manager.manage_schedule') }}">Manage Schedule</a>
                         </li>
                         {% endif %}
-
+    
                         {% if current_user.has_permission('view_team') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('manager.my_team') }}">My Team</a>
                         </li>
                         {% endif %}
-
+    
                         {% if current_user.has_permission('request_time_off') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('user.time_off_request') }}">Time Off Request</a>
                         </li>
                         {% endif %}
-
+    
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
                         </li>
@@ -121,6 +121,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/en-gb.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.3/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     
     <!-- Application scripts -->
     <!-- <script src="{{ url_for('static', filename='js/utils.js') }}"></script> -->

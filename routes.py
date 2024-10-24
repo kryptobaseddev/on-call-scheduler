@@ -14,7 +14,7 @@ import traceback
 import csv
 import io
 import pytz
-from forms import UserForm, TeamForm, PhoneNumberField
+from forms import UserForm, TeamForm, PhoneNumberField, ScheduleForm, TimeoffForm   
 from extensions import db
 from sqlalchemy.orm import joinedload
 
@@ -234,10 +234,34 @@ def analytics_dashboard():
     finally:
         pass
 
-@admin.route('/manage_users', methods=['GET', 'POST'])
+@admin.route('/manage_users')
 @login_required
 @permission_required(MANAGE_USERS)
 def manage_users():
+    users = User.query.filter_by(is_active=True).all()
+    return render_template('manage_users.html', users=users)
+
+@admin.route('/manage_inactive_users')
+@login_required
+@permission_required(MANAGE_USERS)
+def manage_inactive_users():
+    users = User.query.filter_by(is_active=False).all()
+    return render_template('manage_inactive_users.html', users=users)
+
+@admin.route('/activate_user/<int:user_id>', methods=['POST'])
+@login_required
+@permission_required(MANAGE_USERS)
+def activate_user(user_id):
+    user = User.query.get_or_404(user_id)
+    user.is_active = True
+    db.session.commit()
+    flash('User activated successfully.', 'success')
+    return redirect(url_for('admin.manage_inactive_users'))
+
+@admin.route('/create_user', methods=['GET', 'POST'])
+@login_required
+@permission_required(MANAGE_USERS)
+def create_user():
     form = UserForm()
     if form.validate_on_submit():
         new_user = User(
@@ -250,7 +274,7 @@ def manage_users():
             timezone=form.timezone.data,
             role_id=form.role_id.data,
             team_id=form.team_id.data if form.team_id.data != 0 else None,
-            is_active=form.is_active.data
+            is_active=True  # Always set to True for new users
         )
         if form.password.data:
             new_user.set_password(form.password.data)
@@ -258,9 +282,7 @@ def manage_users():
         db.session.commit()
         flash('User created successfully.', 'success')
         return redirect(url_for('admin.manage_users'))
-    
-    users = User.query.all()
-    return render_template('user_management.html', users=users, form=form)
+    return render_template('create_user.html', form=form)
 
 @admin.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -268,7 +290,6 @@ def manage_users():
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     form = UserForm(obj=user)
-    
     if form.validate_on_submit():
         form.populate_obj(user)
         if form.password.data:
@@ -278,124 +299,24 @@ def edit_user(user_id):
         db.session.commit()
         flash('User updated successfully.', 'success')
         return redirect(url_for('admin.manage_users'))
-    
     return render_template('edit_user.html', form=form, user=user)
-    
-        
+
 @admin.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 @permission_required(MANAGE_USERS)
 def delete_user(user_id):
-    try:    
-        user = db.session.query(User).get(user_id)
-        db.session.delete(user)
-        db.session.commit()
-        return jsonify({"status": "success"})
-    except Exception as e:
-        logger.error(f"Error in delete_user route: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({"status": "error", "message": "An error occurred while deleting the user."})
-    finally:
-        pass
-        
-@admin.route('/toggle_user_status/<int:user_id>', methods=['POST'])
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    flash('User deleted successfully.', 'success')
+    return redirect(url_for('admin.manage_users'))
+
+@admin.route('/details_user/<int:user_id>')
 @login_required
 @permission_required(MANAGE_USERS)
-def toggle_user_status(user_id):
-    try:
-        user = db.session.query(User).get(user_id)
-        user.is_active = not user.is_active
-        db.session.commit()
-        return jsonify({"status": "success"})
-    except Exception as e:
-        logger.error(f"Error in toggle_user_status route: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({"status": "error", "message": "An error occurred while toggling the user status."})
-    finally:
-        pass
-
-# @admin.route('/manage_teams', methods=['GET', 'POST'])
-# @login_required
-# @permission_required(MANAGE_TEAMS)
-# def manage_teams():
-    
-#     try:
-#         if request.method == 'POST':
-#             name = request.form['name']
-#             color_id = request.form.get('color_id') or default_color_id()  # No need to pass db.session
-#             manager_id = request.form.get('manager_id')
-            
-#             new_team = Team(name=name, color_id=color_id)
-#             if manager_id:
-#                 manager = db.session.query(User).get(manager_id)
-#                 new_team.manager = manager
-            
-#             db.session.add(new_team)
-#             db.session.commit()
-#             flash('Team added successfully!', 'success')
-#             return redirect(url_for('admin.manage_teams'))
-
-#         teams = db.session.query(Team).all()
-#         managers = db.session.query(User).filter(User.role.in_(['admin', 'manager'])).all()
-#         available_colors = db.session.query(TeamColor).all()
-#         used_colors = [team.color_id for team in teams]
-
-#         return render_template('team_management.html', 
-#                                teams=teams, 
-#                                managers=managers, 
-#                                available_colors=available_colors,
-#                                used_colors=used_colors)
-#     except Exception as e:
-#         logger.error(f"Error in manage_teams route: {str(e)}")
-#         flash('An error occurred while loading team management.', 'error')
-#         return render_template('team_management.html', 
-#                                teams=[], 
-#                                managers=[], 
-#                                available_colors=[],
-#                                used_colors=[])
-#     finally:
-#         pass
-
-# def default_color_id():
-#     # This function should return the ID of the default color, e.g., blue
-#     default_color = TeamColor.query.filter_by(hex_value='#0206f5').first()
-#     return default_color.id if default_color else None
-
-# @admin.route('/edit_team/<int:team_id>', methods=['GET', 'POST'])
-# @login_required
-# @permission_required(MANAGE_TEAMS)
-# def edit_team(team_id):
-    
-#     try:
-#         team = db.session.query(Team).filter_by(id=team_id).first()
-#         if team is None:
-#             flash('Team not found.', 'error')
-#             return redirect(url_for('admin.manage_teams'))
-
-#         if request.method == 'POST':
-#             team.name = request.form['name']
-#             team.color_id = request.form['color_id']  # Ensure this matches the form field name
-#             manager_id = request.form.get('manager_id')
-#             if manager_id:
-#                 manager = db.session.query(User).get(manager_id)
-#                 team.manager = manager
-#             else:
-#                 team.manager = None
-#             db.session.commit()
-#             flash('Team updated successfully!', 'success')
-#             return redirect(url_for('admin.manage_teams'))
-
-#         managers = db.session.query(User).filter(User.role.in_(['admin', 'manager'])).all()
-#         available_colors = db.session.query(TeamColor).all()
-#         used_colors = [t.color_id for t in db.session.query(Team).filter(Team.id != team_id).all()]
-
-#         return render_template('edit_team.html', team=team, managers=managers, available_colors=available_colors, used_colors=used_colors)
-#     except Exception as e:
-#         logger.error(f"Error in edit_team route: {str(e)}")
-#         flash('An error occurred while editing the team.', 'error')
-#         return redirect(url_for('admin.manage_teams'))
-#     finally:
-#         pass
+def details_user(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('details_user.html', user=user)
 
 @admin.route('/manage_teams', methods=['GET'])
 @login_required
@@ -460,30 +381,19 @@ def details_team(team_id):
 @login_required
 @permission_required(MANAGE_SCHEDULES)
 def manage_schedule():
+    form = ScheduleForm()
+    if form.validate_on_submit():
+        start_time = datetime.strptime(form.start_time.data, '%Y-%m-%d %H:%M')
+        end_time = datetime.strptime(form.end_time.data, '%Y-%m-%d %H:%M')
+        new_schedule = Schedule(user_id=form.user_id.data, start_time=start_time, end_time=end_time)
+        db.session.add(new_schedule)
+        db.session.commit()
+        flash('Schedule created successfully', 'success')
+        return redirect(url_for('manager.manage_schedule'))
     
-    try:
-        logger.info(f"User {current_user.username} accessing manage schedule page")
-        if request.method == 'POST':
-            user_id = request.form.get('user_id')
-            start_time = request.form.get('start_time')
-            end_time = request.form.get('end_time')
-            
-            new_schedule = Schedule(user_id=user_id, start_time=start_time, end_time=end_time)
-            db.session.add(new_schedule)
-            db.session.commit()
-            flash('Schedule created successfully', 'success')
-            return redirect(url_for('manager.manage_schedule'))
-        
-        users = db.session.query(User).all()
-        schedules = db.session.query(Schedule).order_by(Schedule.start_time.desc()).all()
-        return render_template('schedule.html', users=users, schedules=schedules)
-    except Exception as e:
-        logger.error(f"Error in manage_schedule route: {str(e)}")
-        logger.error(traceback.format_exc())
-        flash('An error occurred while managing schedules.', 'error')
-        return render_template('schedule.html')
-    finally:
-        pass
+    schedules = Schedule.query.order_by(Schedule.start_time.desc()).all()
+    return render_template('manage_schedule.html', form=form, schedules=schedules)
+
         
 @manager.route('/advanced_schedule', methods=['GET', 'POST'])
 @login_required
@@ -493,40 +403,109 @@ def advanced_schedule():
     try:
         logger.info(f"User {current_user.username} accessing advanced schedule page")
         # Add any data processing or logic needed for advanced scheduling here
-        return render_template('advanced_schedule.html')
+        return render_template('advanced_manage_schedule.html')
     except Exception as e:
         logger.error(f"Error in advanced_schedule route: {str(e)}")
         logger.error(traceback.format_exc())
         flash('An error occurred while loading the advanced scheduling page.', 'error')
-        return render_template('advanced_schedule.html')
+        return render_template('advanced_manage_schedule.html')
     finally:
         pass
 
+@manager.route('/edit_schedule/<int:schedule_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(MANAGE_SCHEDULES)
+def edit_schedule(schedule_id):
+    schedule = Schedule.query.get_or_404(schedule_id)
+    form = ScheduleForm(obj=schedule)
+    
+    # Remove user_id from form
+    del form.user_id
+
+    if form.validate_on_submit():
+        form.populate_obj(schedule)
+        schedule.start_time = datetime.strptime(form.start_time.data, '%Y-%m-%d %H:%M')
+        schedule.end_time = datetime.strptime(form.end_time.data, '%Y-%m-%d %H:%M')
+        db.session.commit()
+        flash('Schedule updated successfully!', 'success')
+        return redirect(url_for('manager.manage_schedule'))
+    
+    # Pre-fill the form with existing data
+    if request.method == 'GET':
+        form.start_time.data = schedule.start_time.strftime('%Y-%m-%d %H:%M')
+        form.end_time.data = schedule.end_time.strftime('%Y-%m-%d %H:%M')
+    
+    return render_template('edit_schedule.html', form=form, schedule=schedule)
+
+@manager.route('/delete_schedule/<int:schedule_id>', methods=['GET'])
+@login_required
+@permission_required(MANAGE_SCHEDULES)
+def delete_schedule(schedule_id):
+    schedule = Schedule.query.get_or_404(schedule_id)
+    db.session.delete(schedule)
+    db.session.commit()
+    flash('Schedule deleted successfully!', 'success')
+    return redirect(url_for('manager.manage_schedule'))
+
+@manager.route('/batch_delete_schedules', methods=['POST'])
+@login_required
+@permission_required(MANAGE_SCHEDULES)
+def batch_delete_schedules():
+    schedule_ids = request.form.getlist('schedule_ids[]')
+    Schedule.query.filter(Schedule.id.in_(schedule_ids)).delete(synchronize_session=False)
+    db.session.commit()
+    flash(f'{len(schedule_ids)} schedules deleted successfully.', 'success')
+    return redirect(url_for('manager.manage_schedule'))
+
+@admin.route('/manage_timeoff', methods=['GET', 'POST'])
+@login_required
+@permission_required(MANAGE_TIMEOFF)
+def manage_timeoff():
+    timeoffs = TimeOffRequest.query.all()
+    return render_template('manage_timeoff.html', timeoffs=timeoffs)
 
 @user.route('/time_off_request', methods=['GET', 'POST'])
 @login_required
 @permission_required(REQUEST_TIME_OFF)
 def time_off_request():
-    try:
-        if request.method == 'POST':
-            user_tz = pytz.timezone(current_user.timezone)
-            start_date = user_tz.localize(datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')).astimezone(timezone.utc)
-            end_date = user_tz.localize(datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')).astimezone(timezone.utc)
-            
-            new_request = TimeOffRequest(user_id=current_user.id, start_date=start_date, end_date=end_date)
-            db.session.add(new_request)
-            db.session.commit()
-            flash('Time off request submitted successfully', 'success')
-            return redirect(url_for('main.index'))
+    form = TimeoffForm()
+    if form.validate_on_submit():
+        user_tz = pytz.timezone(current_user.timezone)
+        start_date = user_tz.localize(datetime.strptime(form.start_time.data, '%Y-%m-%d %H:%M')).astimezone(pytz.UTC)
+        end_date = user_tz.localize(datetime.strptime(form.end_time.data, '%Y-%m-%d %H:%M')).astimezone(pytz.UTC)
         
-        return render_template('time_off_request.html')
-    except Exception as e:
-        logger.error(f"Error in time_off_request route: {str(e)}")
-        logger.error(traceback.format_exc())
-        flash('An error occurred while submitting your time off request.', 'error')
-        return render_template('time_off_request.html')
-    finally:
-        pass
+        new_request = TimeOffRequest(user_id=current_user.id, start_date=start_date, end_date=end_date)
+        db.session.add(new_request)
+        db.session.commit()
+        flash('Time off request submitted successfully', 'success')
+        return redirect(url_for('main.index'))
+    
+    return render_template('time_off_request.html', form=form)
+
+@admin.route('/edit_time_off_request/<int:timeoff_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(MANAGE_TIMEOFF)
+def edit_timeoff(timeoff_id):
+    timeoff = TimeOffRequest.query.get_or_404(timeoff_id)
+    form = TimeoffForm(obj=timeoff)
+    if form.validate_on_submit():
+        form.populate_obj(timeoff)
+        timeoff.start_date = datetime.strptime(form.start_time.data, '%Y-%m-%d %H:%M')
+        timeoff.end_date = datetime.strptime(form.end_time.data, '%Y-%m-%d %H:%M')
+        db.session.commit()
+        flash('Time off request updated successfully!', 'success')
+        return redirect(url_for('admin.manage_timeoff'))
+    return render_template('edit_time_off_request.html', form=form)
+
+@admin.route('/delete_time_off_request/<int:timeoff_id>', methods=['GET'])
+@login_required
+@permission_required(MANAGE_TIMEOFF)
+def delete_timeoff(timeoff_id):
+    timeoff = TimeOffRequest.query.get_or_404(timeoff_id)
+    db.session.delete(timeoff)
+    db.session.commit()
+    flash('Time off request deleted successfully!', 'success')
+    return redirect(url_for('admin.manage_timeoff'))
 
 @admin.route('/custom_report', methods=['GET', 'POST'])
 @login_required
@@ -594,79 +573,79 @@ def export_to_csv(report_type, report_data):
         attachment_filename=f'{report_type}_report.csv'
     )
 
-@manager.route('/edit_schedule/<int:schedule_id>', methods=['GET', 'POST'])
-@login_required
-@permission_required(MANAGE_SCHEDULES)
-def edit_schedule(schedule_id):
+# @manager.route('/edit_schedule/<int:schedule_id>', methods=['GET', 'POST'])
+# @login_required
+# @permission_required(MANAGE_SCHEDULES)
+# def edit_schedule(schedule_id):
     
-    try:
-        schedule = db.session.query(Schedule).get(schedule_id)
-        if not schedule:
-            flash('Schedule not found.', 'error')
-            return redirect(url_for('manager.manage_schedule'))
+#     try:
+#         schedule = db.session.query(Schedule).get(schedule_id)
+#         if not schedule:
+#             flash('Schedule not found.', 'error')
+#             return redirect(url_for('manager.manage_schedule'))
 
-        if request.method == 'POST':
-            schedule.user_id = request.form.get('user_id')
-            schedule.start_time = datetime.strptime(request.form.get('start_time'), '%Y-%m-%dT%H:%M')
-            schedule.end_time = datetime.strptime(request.form.get('end_time'), '%Y-%m-%dT%H:%M')
+#         if request.method == 'POST':
+#             schedule.user_id = request.form.get('user_id')
+#             schedule.start_time = datetime.strptime(request.form.get('start_time'), '%Y-%m-%dT%H:%M')
+#             schedule.end_time = datetime.strptime(request.form.get('end_time'), '%Y-%m-%dT%H:%M')
             
-            db.session.commit()
-            flash('Schedule updated successfully.', 'success')
-            return redirect(url_for('manager.manage_schedule'))
+#             db.session.commit()
+#             flash('Schedule updated successfully.', 'success')
+#             return redirect(url_for('manager.manage_schedule'))
 
-        users = db.session.query(User).all()
-        return render_template('edit_schedule.html', schedule=schedule, users=users)
-    except Exception as e:
-        logger.error(f"Error in edit_schedule route: {str(e)}")
-        logger.error(traceback.format_exc())
-        flash('An error occurred while editing the schedule.', 'error')
-        return redirect(url_for('manager.manage_schedule'))
-    finally:
-        pass
+#         users = db.session.query(User).all()
+#         return render_template('edit_manage_schedule.html', schedule=schedule, users=users)
+#     except Exception as e:
+#         logger.error(f"Error in edit_schedule route: {str(e)}")
+#         logger.error(traceback.format_exc())
+#         flash('An error occurred while editing the schedule.', 'error')
+#         return redirect(url_for('manager.manage_schedule'))
+#     finally:
+#         pass
 
-@manager.route('/delete_schedule/<int:schedule_id>', methods=['GET'])
-@login_required
-@permission_required(MANAGE_SCHEDULES)
-def delete_schedule(schedule_id):
+# @manager.route('/delete_schedule/<int:schedule_id>', methods=['GET'])
+# @login_required
+# @permission_required(MANAGE_SCHEDULES)
+# def delete_schedule(schedule_id):
     
-    try:
-        schedule = db.session.query(Schedule).get(schedule_id)
-        if schedule:
-            db.session.delete(schedule)
-            db.session.commit()
-            flash('Schedule deleted successfully.', 'success')
-        else:
-            flash('Schedule not found.', 'error')
-        return redirect(url_for('manager.manage_schedule'))
-    except Exception as e:
-        logger.error(f"Error in delete_schedule route: {str(e)}")
-        logger.error(traceback.format_exc())
-        flash('An error occurred while deleting the schedule.', 'error')
-        return redirect(url_for('manager.manage_schedule'))
-    finally:
-        pass
+#     try:
+#         schedule = db.session.query(Schedule).get(schedule_id)
+#         if schedule:
+#             db.session.delete(schedule)
+#             db.session.commit()
+#             flash('Schedule deleted successfully.', 'success')
+#         else:
+#             flash('Schedule not found.', 'error')
+#         return redirect(url_for('manager.manage_schedule'))
+#     except Exception as e:
+#         logger.error(f"Error in delete_schedule route: {str(e)}")
+#         logger.error(traceback.format_exc())
+#         flash('An error occurred while deleting the schedule.', 'error')
+#         return redirect(url_for('manager.manage_schedule'))
+#     finally:
+#         pass
 
-@manager.route('/batch_delete_schedules', methods=['POST'])
-@login_required
-@permission_required(MANAGE_SCHEDULES)
-def batch_delete_schedules():
+# @manager.route('/batch_delete_schedules', methods=['POST'])
+# @login_required
+# @permission_required(MANAGE_SCHEDULES)
+# def batch_delete_schedules():
     
-    try:
-        schedule_ids = request.form.getlist('schedule_ids[]')
-        if schedule_ids:
-            db.session.query(Schedule).filter(Schedule.id.in_(schedule_ids)).delete(synchronize_session=False)
-            db.session.commit()
-            flash(f'{len(schedule_ids)} schedules deleted successfully.', 'success')
-        else:
-            flash('No schedules selected for deletion.', 'warning')
-        return redirect(url_for('manager.manage_schedule'))
-    except Exception as e:
-        logger.error(f"Error in batch_delete_schedules route: {str(e)}")
-        logger.error(traceback.format_exc())
-        flash('An error occurred while deleting the schedules.', 'error')
-        return redirect(url_for('manager.manage_schedule'))
-    finally:
-        pass
+#     try:
+#         schedule_ids = request.form.getlist('schedule_ids[]')
+#         if schedule_ids:
+#             db.session.query(Schedule).filter(Schedule.id.in_(schedule_ids)).delete(synchronize_session=False)
+#             db.session.commit()
+#             flash(f'{len(schedule_ids)} schedules deleted successfully.', 'success')
+#         else:
+#             flash('No schedules selected for deletion.', 'warning')
+#         return redirect(url_for('manager.manage_schedule'))
+#     except Exception as e:
+#         logger.error(f"Error in batch_delete_schedules route: {str(e)}")
+#         logger.error(traceback.format_exc())
+#         flash('An error occurred while deleting the schedules.', 'error')
+#         return redirect(url_for('manager.manage_schedule'))
+#     finally:
+#         pass
 
 @manager.route('/my_team', methods=['GET', 'POST'])
 @login_required

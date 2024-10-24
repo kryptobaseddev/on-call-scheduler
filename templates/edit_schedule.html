@@ -2,26 +2,19 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Edit Schedule</h1>
+    <h1 class="mb-4">Edit Schedule for {{ schedule.user.first_name }} {{ schedule.user.last_name }}</h1>
 
     <div class="card">
         <div class="card-body">
             <form action="{{ url_for('manager.edit_schedule', schedule_id=schedule.id) }}" method="POST">
+                {{ form.hidden_tag() }}
                 <div class="mb-3">
-                    <label for="user_id" class="form-label">User</label>
-                    <select class="form-select" id="user_id" name="user_id" required>
-                        {% for user in users %}
-                            <option value="{{ user.id }}" {% if user.id == schedule.user_id %}selected{% endif %}>{{ user.username }}</option>
-                        {% endfor %}
-                    </select>
+                    {{ form.start_time.label(class="form-label") }}
+                    {{ form.start_time(class="form-control flatpickr-datetime") }}
                 </div>
                 <div class="mb-3">
-                    <label for="start_time" class="form-label">Start Time</label>
-                    <input type="datetime-local" class="form-control" id="start_time" name="start_time" value="{{ schedule.start_time.strftime('%Y-%m-%dT%H:%M') }}" required>
-                </div>
-                <div class="mb-3">
-                    <label for="end_time" class="form-label">End Time</label>
-                    <input type="datetime-local" class="form-control" id="end_time" name="end_time" value="{{ schedule.end_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+                    {{ form.end_time.label(class="form-label") }}
+                    {{ form.end_time(class="form-control flatpickr-datetime") }}
                 </div>
                 <button type="submit" class="btn btn-primary">Update Schedule</button>
                 <a href="{{ url_for('manager.manage_schedule') }}" class="btn btn-secondary">Cancel</a>
